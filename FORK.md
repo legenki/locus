@@ -44,6 +44,13 @@ scripts/zed/setup-macos.sh
 }
 ```
 
+## Что добавлено в форк
+
+- **`map`** — ранжированная карта репозитория (PageRank по импортам и вызовам) с режимами `importers` и `callers`. Индекс хранится в `~/.omp/locus/index/`. Подробности в `docs/tools/map.md`.
+- **`edit_symbol`** — правка по имени символа: `replace`, `insert_before`/`after`, `delete`. Подробности в `docs/tools/edit_symbol.md`.
+- **Спек и статус** — `docs/locus/spec-v0.md`.
+- **Выключатели:** `LOCUS_REPOMAP=off` отключает прогрев и карту в промпте, `LOCUS_REPOMAP_INJECT=off` отключает только карту в промпте.
+
 ## Цикл разработки
 
 - **Правки в TypeScript** (`packages/*/src`): ничего пересобирать не надо, лаунчер запускает исходники через Bun. Достаточно открыть новый тред в Agent Panel, и Zed перезапустит агента.

@@ -4,4 +4,6 @@ export * from "./registry";
 export * from "./render";
 export * from "./repo-index";
 export * from "./resolve";
+export * from "./session-boosts";
 export * from "./store";
+export * from "./warmup";

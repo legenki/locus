@@ -1,16 +1,18 @@
 /**
  * locus: process-wide registry of open repository indexes, one per root.
  *
- * `ensureFresh()` reconciles at most once per {@link RECONCILE_INTERVAL_MS}
- * unless forced; tools call it before every query so manual edits, branch
- * switches and other processes' writes are picked up without a watcher.
+ * `ensureFresh()` reconciles before every query (an idle pass is a stat walk,
+ * ~40 ms on 8k files), so the agent's own writes, manual edits in the editor,
+ * branch switches and other processes are all picked up without a watcher.
+ * Concurrent callers share one in-flight pass.
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { logger } from "@oh-my-pi/pi-utils";
 import { type ReconcileResult, RepoIndex } from "./repo-index";
 
-export const RECONCILE_INTERVAL_MS = 3000;
+/** Reuse a pass this recent (covers bursts of calls in one turn). */
+export const RECONCILE_INTERVAL_MS = 250;
 
 interface Entry {
 	index: RepoIndex;

@@ -12,7 +12,7 @@ import { getConfigRootDir, openSqliteDatabaseSync } from "@oh-my-pi/pi-utils";
 import type { FileTags } from "@oh-my-pi/pi-natives";
 
 /** Bump when the schema or the meaning of stored tags changes. */
-export const INDEX_SCHEMA_VERSION = 1;
+export const INDEX_SCHEMA_VERSION = 2;
 
 export interface FileRow {
 	id: number;

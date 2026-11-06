@@ -36,8 +36,18 @@
 - Callers: `callers of <path>::<qname> (<n>)` then `path::qname` per caller; `(by unique name)` marks calls resolved through a TS ambient global.
 - `details`: `mode`, `files` (indexed file count), `indexMs` (reconcile time of this call).
 
+## Personalization
+
+The ranking is personalized per call: `focus` files (+3), and files from the tool calls still in context — edited by `edit`/`write`/`edit_symbol`/`ast_edit` (+5) or read by `read`/`map` (+3), decaying to a third over the last 60 calls. Only tool-argument paths count.
+
+## System prompt
+
+When `map` is available, the project prompt carries a `<repo-map>` block: a ~1000-token global map from the index as stored at session start (it never waits for indexing; absent on a repository's first session). The text is fixed for the process lifetime so prompt rebuilds keep the provider cache. Disable with `LOCUS_REPOMAP_INJECT=off`.
+
 ## Indexing
 
-- The index for the session's repository root (nearest ancestor with `.git`) is reconciled before a query, at most every 3 s: unchanged `(size, mtime)` files are skipped, changed stats are confirmed by content hash, changed content is re-parsed.
+- Building a session's tools starts a background reconcile, so the first `map` call rarely waits on a cold index. Skipped under `bun test`; `LOCUS_REPOMAP=off` disables warmup and the prompt map.
+- The index for the session's repository root (nearest ancestor with `.git`) is reconciled before every query (a pass under 250 ms old is reused): unchanged `(size, mtime)` files are skipped, changed stats are confirmed by content hash, changed content is re-parsed. This picks up the agent's writes, editor edits and branch switches without a watcher.
+- A new process reuses the stored graph unless project configs (`package.json`, `tsconfig.json`, `go.mod`, `Cargo.toml` — paths and stats) changed.
 - Edits that touch few files recompute only the files whose resolution depends on them; added or removed files, config changes, or a scope over 10% of the repo rebuild the whole graph.
 - References resolve only through imports, `this.`/`self.` members, the same file, the same Go package, Rust glob imports, and TS ambient `.d.ts` globals. There is no "unique name anywhere" fallback; unresolvable calls (method calls on values, calls inside Rust macros) are left out rather than guessed.

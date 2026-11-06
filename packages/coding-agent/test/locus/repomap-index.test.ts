@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { TempDir } from "@oh-my-pi/pi-utils";
 import {
+	cachedStaticMap,
 	estimateTokens,
 	rebuildGraph,
 	RepoIndex,
@@ -179,6 +180,30 @@ describe("repository index", () => {
 		expect(calls().some(c => c.includes("log.ts"))).toBe(false);
 	});
 
+	test("a reopened index (new process) does not rebuild an unchanged graph", async () => {
+		await index.reconcile();
+		const dbPath = path.join(root, ".cache/locus/index/test.db");
+		index.close();
+		index = RepoIndex.open(root, dbPath);
+		const result = await index.reconcile();
+		expect(result).toMatchObject({ unchanged: 11, graph: null });
+	});
+
+	test("editing tsconfig paths re-resolves imports", async () => {
+		await index.reconcile();
+		expect(importers("packages/app/src/log.ts")).toEqual(["packages/app/src/main.ts"]);
+		await write("packages/app/src/logging/log.ts", "export function info(msg: string): void {}\n");
+		await index.reconcile();
+		await write(
+			"packages/app/tsconfig.json",
+			'{ "compilerOptions": { "baseUrl": ".", "paths": { "~/*": ["src/logging/*"] } } }',
+		);
+		const result = await index.reconcile();
+		expect(result.graph?.scope).toBe("full");
+		expect(importers("packages/app/src/log.ts")).toEqual([]);
+		expect(importers("packages/app/src/logging/log.ts")).toEqual(["packages/app/src/main.ts"]);
+	});
+
 	test("a scoped rebuild after edits matches a full rebuild", async () => {
 		await index.reconcile();
 		// Behind the barrel: rename the export the app calls, add a new one.
@@ -231,6 +256,20 @@ describe("map rendering", () => {
 		const body = tiny.slice(0, tiny.lastIndexOf("\n[map:"));
 		expect(estimateTokens(body)).toBeLessThanOrEqual(256);
 		expect(body.split("\n")[0]).toBe("svc/run.go");
+	});
+
+	test("the static prompt map follows graph rebuilds and is reused otherwise", async () => {
+		await index.reconcile();
+		const first = cachedStaticMap(index.store);
+		expect(first).toContain("rs/src/util.rs");
+		expect(cachedStaticMap(index.store)).toBe(first);
+		await write("rs/src/extra.rs", "pub fn extra() {}\n");
+		await write(
+			"rs/src/lib.rs",
+			"pub mod graph;\nmod util;\npub mod extra;\n\npub fn run() { graph::rank(); util::helper(); extra::extra(); }\n",
+		);
+		await index.reconcile();
+		expect(cachedStaticMap(index.store)).toContain("rs/src/extra.rs");
 	});
 
 	test("importers lists the names each importer binds", async () => {

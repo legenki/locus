@@ -114,7 +114,7 @@ export class RepoIndex {
 		return this.#running;
 	}
 
-	async #list(signal?: AbortSignal): Promise<{ code: ListedFile[]; configs: string[] }> {
+	async #list(signal?: AbortSignal): Promise<{ code: ListedFile[]; configs: string[]; configKey: string }> {
 		const { matches } = await glob({
 			pattern: "**/*",
 			path: this.root,
@@ -128,22 +128,29 @@ export class RepoIndex {
 		});
 		const code: ListedFile[] = [];
 		const configs: string[] = [];
+		const configStats: string[] = [];
 		for (const m of matches) {
 			const rel = m.path;
 			const base = path.posix.basename(rel);
-			if (PROJECT_CONFIG_FILES.has(base)) configs.push(rel);
+			if (PROJECT_CONFIG_FILES.has(base)) {
+				configs.push(rel);
+				configStats.push(`${rel}:${m.size ?? 0}:${m.mtime ?? 0}`);
+			}
 			if (!isIndexable(rel)) continue;
 			const size = m.size ?? 0;
 			if (size > MAX_INDEXED_FILE_BYTES) continue;
 			code.push({ path: rel, size, mtimeMs: m.mtime ?? 0 });
 		}
 		configs.sort();
-		return { code, configs };
+		configStats.sort();
+		// Paths and stats: editing `tsconfig.json` paths or `exports` must re-resolve.
+		const configKey = Bun.hash(configStats.join("\n")).toString(16);
+		return { code, configs, configKey };
 	}
 
 	async #reconcileOnce(signal?: AbortSignal): Promise<ReconcileResult> {
 		const started = performance.now();
-		const { code, configs } = await this.#list(signal);
+		const { code, configs, configKey } = await this.#list(signal);
 		const listed = new Map(code.map(f => [f.path, f]));
 		const known = new Map(this.store.allFiles().map(f => [f.path, f]));
 
@@ -199,11 +206,12 @@ export class RepoIndex {
 			});
 		}
 
-		const configKey = configs.join("\n");
-		const configChanged = configKey !== this.#configKey || this.#config === null;
+		// Configs are loaded once per process; the graph only needs a rebuild when
+		// they differ from what the stored graph was built with.
+		const configChanged = configKey !== (this.#configKey || this.store.getMeta("config_key"));
 		const changed = result.added + result.updated + result.removed > 0;
 		const neverBuilt = this.store.getMeta("graph_built_at") === null;
-		if (configChanged) {
+		if (configChanged || this.#config === null) {
 			this.#config = await loadProjectConfig(this.root, configs, new Set(listed.keys()));
 			this.#configKey = configKey;
 		}
@@ -221,6 +229,7 @@ export class RepoIndex {
 				tooWide;
 			result.graph = rebuildGraph(this.store, this.#config, full ? undefined : scope);
 			this.store.setMeta("graph_built_at", `${Date.now()}-${crypto.randomUUID()}`);
+			this.store.setMeta("config_key", configKey);
 		}
 		result.durationMs = performance.now() - started;
 		logger.debug("locus: index reconciled", { root: this.root, ...result });

@@ -44,6 +44,7 @@ import { XD_URL_PREFIX } from "@oh-my-pi/pi-tui/tools/xd-url";
 import { resolveActiveRepoContext } from "./utils/active-repo-context";
 import { normalizePromptPath } from "./utils/prompt-path";
 import { AGENTS_MD_LIMIT, buildWorkspaceTree, type WorkspaceTree } from "./workspace-tree";
+import { staticRepoMapForPrompt } from "./locus/repomap/warmup"; // locus
 import { combine } from "./config/registry";
 import { cfgBashAutoBackgroundEnabled } from "./exec/settings";
 import { cfgEvalAutoBackgroundEnabled } from "./eval/settings";
@@ -831,6 +832,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		);
 		return { ...primary, agentsMdFiles: [...primary.agentsMdFiles, ...extraTrees.flatMap(t => t.agentsMdFiles)] };
 	})();
+	const locusMapPromise = staticRepoMapForPrompt(resolvedCwd); // locus: reads the existing index only
 	const skillsPromise: Promise<readonly Skill[]> =
 		providedSkills !== undefined
 			? Promise.resolve(providedSkills)
@@ -921,6 +923,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	if (!toolNames) {
 		toolNames = tools ? Array.from(tools.keys()) : [...DEFAULT_SYSTEM_PROMPT_TOOL_NAMES];
 	}
+	const locusMap = toolNames.includes("map") ? await withDeadline("locusRepoMap", locusMapPromise, "") : ""; // locus
 
 	// List mode shows a compact tool-name list; it only applies when descriptors
 	// stay in provider-native tool schemas AND native tool calling is active.
@@ -1011,6 +1014,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		contextFiles,
 		agentsMdSearch: { files: agentsMdFiles },
 		workspaceTree,
+		locusMap, // locus
 		hasSkillUriAccess,
 		internalUrls: InternalUrlRouter.instance().describe(schemeHost),
 		skills: filteredSkills,

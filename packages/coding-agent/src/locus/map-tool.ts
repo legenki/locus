@@ -7,6 +7,7 @@ import { ToolError } from "@oh-my-pi/pi-tui/tools/tool-errors";
 import type { ToolSession } from "../tools";
 import mapDescription from "./prompts/map.md" with { type: "text" };
 import {
+	collectSessionBoosts,
 	DEFAULT_MAP_BUDGET,
 	ensureFresh,
 	getRepoIndex,
@@ -14,7 +15,9 @@ import {
 	renderCallers,
 	renderImporters,
 	renderMap,
+	repoRelative,
 	SymbolTargetError,
+	warmRepoIndex,
 } from "./repomap";
 
 const mapSchema = type({
@@ -44,7 +47,11 @@ export class MapTool implements AgentTool<typeof mapSchema, MapToolDetails> {
 	readonly parameters = mapSchema;
 	readonly strict = true;
 
-	constructor(private readonly session: ToolSession) {}
+	constructor(private readonly session: ToolSession) {
+		// Tools are built at session start: index in the background so the first
+		// `map` call rarely waits for a cold scan.
+		warmRepoIndex(session.cwd);
+	}
 
 	async execute(
 		_toolCallId: string,
@@ -71,10 +78,12 @@ export class MapTool implements AgentTool<typeof mapSchema, MapToolDetails> {
 				mode = "callers";
 				text = renderCallers(index.store, params.callers, depth);
 			} else {
+				const messages = this.session.getContextMessages?.() ?? [];
 				text = renderMap(index.store, {
 					focus: params.focus,
 					budget: params.budget,
 					includePrivate: params.include_private,
+					boosts: collectSessionBoosts(messages, repoRelative(index.root, this.session.cwd)),
 				});
 			}
 		} catch (error) {

@@ -58,6 +58,7 @@ import { EvalTool } from "./eval";
 import { resolveEvalBackends } from "./eval-backends";
 import { GithubTool } from "./gh";
 import { GlobTool } from "./glob";
+import { EditSymbolTool } from "../locus/edit-symbol/tool"; // locus
 import { MapTool } from "../locus/map-tool"; // locus
 import { GrepTool } from "./grep";
 import { IdaTool } from "./ida";
@@ -620,6 +621,7 @@ export const BUILTIN_TOOLS: Record<BuiltinToolName, ToolFactory> = {
 	learn: LearnTool.createIf,
 	manage_skill: ManageSkillTool.createIf,
 	map: s => new MapTool(s), // locus
+	edit_symbol: s => new EditSymbolTool(s), // locus
 };
 
 export const HIDDEN_TOOLS: Record<HiddenToolName, ToolFactory> = {
@@ -781,6 +783,7 @@ export async function resolveBuiltinToolPlan(session: ToolSession, toolNames?: s
 		if (name === "lsp") return enableLsp && cfgLspEnabled.get(session.settings);
 		// Without an edit tool, bash is the remaining way to modify existing files.
 		if (name === "edit") return !editDisabled;
+		if (name === "edit_symbol") return !editDisabled; // locus
 		if (name === "bash") return editDisabled || cfgBashEnabled.get(session.settings);
 		if (name === "eval") return allowEval;
 		if (name === "debug") return cfgDebugEnabled.get(session.settings);

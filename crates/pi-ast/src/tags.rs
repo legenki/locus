@@ -201,26 +201,30 @@ fn count_lines(code: &str) -> u32 {
 		return 0;
 	}
 	let newlines = code.bytes().filter(|&b| b == b'\n').count() as u32;
-	if code.ends_with('\n') { newlines } else { newlines + 1 }
+	if code.ends_with('\n') {
+		newlines
+	} else {
+		newlines + 1
+	}
 }
 
 /// Walk context: the enclosing symbol and the dotted container path.
 #[derive(Clone, Default)]
 struct Ctx {
 	/// Innermost enclosing symbol (refs attach here).
-	enclosing: Option<u32>,
+	enclosing:      Option<u32>,
 	/// Container symbol for new declarations (class, module, impl target).
-	parent:    Option<u32>,
+	parent:         Option<u32>,
 	/// Dotted path prefix for qualified names.
-	prefix:    String,
+	prefix:         String,
 	/// Declarations here are exported regardless of their own modifiers
 	/// (members of an exported TS namespace or class keep their own rules;
 	/// this is only set by `export` wrappers).
-	exported:  bool,
+	exported:       bool,
 	/// Inside a function body: nested declarations are locals, not symbols.
-	in_body:   bool,
+	in_body:        bool,
 	/// Trait of the enclosing Rust `impl Trait for Type`.
-	detail:    Option<String>,
+	detail:         Option<String>,
 	/// Inside a Rust `impl` or `trait`: functions here are methods.
 	type_container: bool,
 }
@@ -319,12 +323,16 @@ impl<'a> Walker<'a> {
 	fn inner_ctx(&self, ctx: &Ctx, index: u32, container: bool, body: bool) -> Ctx {
 		let sym = &self.symbols[index as usize];
 		Ctx {
-			enclosing: Some(index),
-			parent:    if container { Some(index) } else { ctx.parent },
-			prefix:    if container { sym.qname.clone() } else { ctx.prefix.clone() },
-			exported:  false,
-			in_body:   body || ctx.in_body,
-			detail:    if container { None } else { ctx.detail.clone() },
+			enclosing:      Some(index),
+			parent:         if container { Some(index) } else { ctx.parent },
+			prefix:         if container {
+				sym.qname.clone()
+			} else {
+				ctx.prefix.clone()
+			},
+			exported:       false,
+			in_body:        body || ctx.in_body,
+			detail:         if container { None } else { ctx.detail.clone() },
 			type_container: false,
 		}
 	}
@@ -377,7 +385,11 @@ impl<'a> Walker<'a> {
 		let end = body_start(head).unwrap_or_else(|| head.end_byte());
 		let raw = std::str::from_utf8(&self.src[start.min(end)..end]).unwrap_or("");
 		// Single-line heads: keep only the first line of long initializers.
-		let raw = if body_start(head).is_none() { raw.lines().next().unwrap_or("") } else { raw };
+		let raw = if body_start(head).is_none() {
+			raw.lines().next().unwrap_or("")
+		} else {
+			raw
+		};
 		let mut sig = String::with_capacity(raw.len().min(MAX_SIGNATURE_CHARS));
 		let mut last_space = true;
 		for ch in raw.chars() {
@@ -406,7 +418,14 @@ impl<'a> Walker<'a> {
 
 	// ── References ────────────────────────────────────────────────────────
 
-	fn push_ref(&mut self, name: &str, qualifier: Option<String>, kind: &'static str, row: usize, ctx: &Ctx) {
+	fn push_ref(
+		&mut self,
+		name: &str,
+		qualifier: Option<String>,
+		kind: &'static str,
+		row: usize,
+		ctx: &Ctx,
+	) {
 		if name.is_empty() {
 			return;
 		}
@@ -477,19 +496,27 @@ impl<'a> Walker<'a> {
 				self.js_variables(node, node, ctx);
 				true
 			},
-			"method_definition" | "method_signature" | "abstract_method_signature" if ctx.parent.is_some() && !ctx.in_body => {
+			"method_definition" | "method_signature" | "abstract_method_signature"
+				if ctx.parent.is_some() && !ctx.in_body =>
+			{
 				self.js_decl(node, node, "method", false, ctx, false);
 				true
 			},
-			"public_field_definition" | "field_definition" | "property_signature" if ctx.parent.is_some() && !ctx.in_body => {
-				let name_node = node.child_by_field_name("name").or_else(|| node.child_by_field_name("property"));
-				let Some(name_node) = name_node else { return false };
+			"public_field_definition" | "field_definition" | "property_signature"
+				if ctx.parent.is_some() && !ctx.in_body =>
+			{
+				let name_node = node
+					.child_by_field_name("name")
+					.or_else(|| node.child_by_field_name("property"));
+				let Some(name_node) = name_node else {
+					return false;
+				};
 				let decl = Decl {
-					range: node,
-					head: node,
-					name: self.text(name_node).to_owned(),
+					range:    node,
+					head:     node,
+					name:     self.text(name_node).to_owned(),
 					name_row: name_node.start_position().row,
-					kind: "property",
+					kind:     "property",
 					exported: false,
 				};
 				let index = self.push_symbol(&decl, ctx);
@@ -514,7 +541,15 @@ impl<'a> Walker<'a> {
 	}
 
 	/// Record a JS/TS declaration and walk its body.
-	fn js_decl(&mut self, range: Node, node: Node, kind: &'static str, exported: bool, ctx: &Ctx, container: bool) {
+	fn js_decl(
+		&mut self,
+		range: Node,
+		node: Node,
+		kind: &'static str,
+		exported: bool,
+		ctx: &Ctx,
+		container: bool,
+	) {
 		let Some(name_node) = node.child_by_field_name("name") else {
 			self.walk_children(node, ctx);
 			return;
@@ -543,13 +578,19 @@ impl<'a> Walker<'a> {
 			.collect();
 		let single = declarators.len() == 1;
 		for d in declarators {
-			let Some(name_node) = d.child_by_field_name("name").filter(|n| n.kind() == "identifier") else {
+			let Some(name_node) = d
+				.child_by_field_name("name")
+				.filter(|n| n.kind() == "identifier")
+			else {
 				self.walk_children(d, ctx);
 				continue;
 			};
 			let value = d.child_by_field_name("value");
 			let is_fn = value.is_some_and(|v| {
-				matches!(v.kind(), "arrow_function" | "function_expression" | "function" | "generator_function")
+				matches!(
+					v.kind(),
+					"arrow_function" | "function_expression" | "function" | "generator_function"
+				)
 			});
 			let kind = if is_fn {
 				"function"
@@ -575,7 +616,9 @@ impl<'a> Walker<'a> {
 	}
 
 	fn js_export(&mut self, node: Node, ctx: &Ctx) -> bool {
-		let source = node.child_by_field_name("source").map(|s| self.js_string(s));
+		let source = node
+			.child_by_field_name("source")
+			.map(|s| self.js_string(s));
 		if let Some(spec) = source {
 			// Re-export: `export { a as b } from "x"` / `export * from "x"`.
 			let mut names = Vec::new();
@@ -584,7 +627,10 @@ impl<'a> Walker<'a> {
 				match child.kind() {
 					"export_clause" => names.extend(self.js_specifiers(child, "export_specifier")),
 					"namespace_export" => {
-						let local = child.named_child(0).map_or("*", |n| self.text(n)).to_owned();
+						let local = child
+							.named_child(0)
+							.map_or("*", |n| self.text(n))
+							.to_owned();
 						names.push(ImportName { imported: "*".to_owned(), local });
 					},
 					_ => {},
@@ -614,18 +660,26 @@ impl<'a> Walker<'a> {
 			"class_declaration" | "abstract_class_declaration" => {
 				self.js_decl(node, decl, "class", true, &exported_ctx, true);
 			},
-			"interface_declaration" => self.js_decl(node, decl, "interface", true, &exported_ctx, true),
+			"interface_declaration" => {
+				self.js_decl(node, decl, "interface", true, &exported_ctx, true)
+			},
 			"type_alias_declaration" => self.js_decl(node, decl, "type", true, &exported_ctx, false),
 			"enum_declaration" => self.js_decl(node, decl, "enum", true, &exported_ctx, false),
-			"internal_module" | "module" => self.js_decl(node, decl, "module", true, &exported_ctx, true),
-			"lexical_declaration" | "variable_declaration" => self.js_variables(node, decl, &exported_ctx),
+			"internal_module" | "module" => {
+				self.js_decl(node, decl, "module", true, &exported_ctx, true)
+			},
+			"lexical_declaration" | "variable_declaration" => {
+				self.js_variables(node, decl, &exported_ctx)
+			},
 			_ => self.walk(decl, &exported_ctx),
 		}
 		true
 	}
 
 	fn js_import(&mut self, node: Node) {
-		let Some(source) = node.child_by_field_name("source") else { return };
+		let Some(source) = node.child_by_field_name("source") else {
+			return;
+		};
 		let specifier = self.js_string(source);
 		let mut names = Vec::new();
 		let mut cursor = node.walk();
@@ -637,7 +691,10 @@ impl<'a> Walker<'a> {
 			for part in child.named_children(&mut c2) {
 				match part.kind() {
 					"identifier" => {
-						names.push(ImportName { imported: "default".to_owned(), local: self.text(part).to_owned() });
+						names.push(ImportName {
+							imported: "default".to_owned(),
+							local:    self.text(part).to_owned(),
+						});
 					},
 					"namespace_import" => {
 						let local = part.named_child(0).map_or("*", |n| self.text(n)).to_owned();
@@ -664,9 +721,13 @@ impl<'a> Walker<'a> {
 			if spec.kind() != kind {
 				continue;
 			}
-			let Some(name) = spec.child_by_field_name("name") else { continue };
+			let Some(name) = spec.child_by_field_name("name") else {
+				continue;
+			};
 			let imported = self.js_name(name);
-			let local = spec.child_by_field_name("alias").map_or_else(|| imported.clone(), |a| self.js_name(a));
+			let local = spec
+				.child_by_field_name("alias")
+				.map_or_else(|| imported.clone(), |a| self.js_name(a));
 			out.push(ImportName { imported, local });
 		}
 		out
@@ -674,18 +735,24 @@ impl<'a> Walker<'a> {
 
 	/// Identifier text, or the content of a string-literal export name.
 	fn js_name(&self, node: Node) -> String {
-		if node.kind() == "string" { self.js_string(node) } else { self.text(node).to_owned() }
+		if node.kind() == "string" {
+			self.js_string(node)
+		} else {
+			self.text(node).to_owned()
+		}
 	}
 
 	fn js_string(&self, node: Node) -> String {
 		let raw = self.text(node);
-		raw.trim_matches(|c| c == '"' || c == '\'' || c == '`').to_owned()
+		raw.trim_matches(|c| c == '"' || c == '\'' || c == '`')
+			.to_owned()
 	}
 
 	/// `import("x")` / `require("x")` with a literal argument.
 	fn js_dynamic_import(&self, node: Node) -> Option<String> {
 		let func = node.child_by_field_name("function")?;
-		let is_import = func.kind() == "import" || (func.kind() == "identifier" && self.text(func) == "require");
+		let is_import =
+			func.kind() == "import" || (func.kind() == "identifier" && self.text(func) == "require");
 		if !is_import {
 			return None;
 		}
@@ -698,7 +765,9 @@ impl<'a> Walker<'a> {
 		let row = node.start_position().row;
 		match node.kind() {
 			"call_expression" => {
-				let Some(func) = node.child_by_field_name("function") else { return };
+				let Some(func) = node.child_by_field_name("function") else {
+					return;
+				};
 				match func.kind() {
 					"identifier" => {
 						let name = self.text(func);
@@ -727,7 +796,9 @@ impl<'a> Walker<'a> {
 				self.push_ref(self.text(node), None, "type", row, ctx);
 			},
 			"nested_type_identifier" => {
-				if let (Some(m), Some(n)) = (node.child_by_field_name("module"), node.child_by_field_name("name")) {
+				if let (Some(m), Some(n)) =
+					(node.child_by_field_name("module"), node.child_by_field_name("name"))
+				{
 					self.push_ref(self.text(n), Some(self.text(m).to_owned()), "type", row, ctx);
 				}
 			},
@@ -782,11 +853,7 @@ impl<'a> Walker<'a> {
 				let parent = receiver
 					.as_deref()
 					.and_then(|recv| self.find_top_level(recv, &["struct", "interface", "type"]));
-				let method_ctx = Ctx {
-					parent,
-					prefix: receiver.unwrap_or_default(),
-					..ctx.clone()
-				};
+				let method_ctx = Ctx { parent, prefix: receiver.unwrap_or_default(), ..ctx.clone() };
 				self.go_decl(node, node.child_by_field_name("name"), "method", &method_ctx);
 				true
 			},
@@ -809,7 +876,11 @@ impl<'a> Walker<'a> {
 				true
 			},
 			"const_declaration" | "var_declaration" if !ctx.in_body => {
-				let kind = if node.kind() == "const_declaration" { "const" } else { "var" };
+				let kind = if node.kind() == "const_declaration" {
+					"const"
+				} else {
+					"var"
+				};
 				let specs = collect_descendants(node, &["const_spec", "var_spec"]);
 				let single = specs.len() == 1;
 				for spec in specs {
@@ -821,7 +892,11 @@ impl<'a> Walker<'a> {
 					for name_node in &names {
 						let name = self.text(*name_node).to_owned();
 						let decl = Decl {
-							range: if single && names.len() == 1 { node } else { spec },
+							range: if single && names.len() == 1 {
+								node
+							} else {
+								spec
+							},
 							head: spec,
 							exported: is_go_exported(&name),
 							name,
@@ -864,7 +939,9 @@ impl<'a> Walker<'a> {
 	}
 
 	fn go_type_spec(&mut self, range: Node, spec: Node, kind: &'static str, ctx: &Ctx) {
-		let Some(name_node) = spec.child_by_field_name("name") else { return };
+		let Some(name_node) = spec.child_by_field_name("name") else {
+			return;
+		};
 		let name = self.text(name_node).to_owned();
 		let decl = Decl {
 			range,
@@ -876,13 +953,17 @@ impl<'a> Walker<'a> {
 		};
 		let index = self.push_symbol(&decl, ctx);
 		let container = self.inner_ctx(ctx, index, true, false);
-		let Some(ty) = spec.child_by_field_name("type") else { return };
+		let Some(ty) = spec.child_by_field_name("type") else {
+			return;
+		};
 		if ty.kind() == "interface_type" {
 			let mut cursor = ty.walk();
 			let members: Vec<Node> = ty.named_children(&mut cursor).collect();
 			for m in members {
 				if matches!(m.kind(), "method_elem" | "method_spec") {
-					let Some(mname) = m.child_by_field_name("name") else { continue };
+					let Some(mname) = m.child_by_field_name("name") else {
+						continue;
+					};
 					let name = self.text(mname).to_owned();
 					let decl = Decl {
 						range: m,
@@ -907,7 +988,9 @@ impl<'a> Walker<'a> {
 
 	/// Receiver base type name: `(s *Store)` → `Store`, `(l List[T])` → `List`.
 	fn go_receiver_type(&self, receiver: Node) -> Option<String> {
-		let param = collect_descendants(receiver, &["parameter_declaration"]).into_iter().next()?;
+		let param = collect_descendants(receiver, &["parameter_declaration"])
+			.into_iter()
+			.next()?;
 		let mut ty = param.child_by_field_name("type")?;
 		loop {
 			match ty.kind() {
@@ -921,9 +1004,16 @@ impl<'a> Walker<'a> {
 
 	fn go_imports(&mut self, node: Node) {
 		for spec in collect_descendants(node, &["import_spec"]) {
-			let Some(path) = spec.child_by_field_name("path") else { continue };
-			let specifier = self.text(path).trim_matches(|c| c == '"' || c == '`').to_owned();
-			let alias = spec.child_by_field_name("name").map(|n| self.text(n).to_owned());
+			let Some(path) = spec.child_by_field_name("path") else {
+				continue;
+			};
+			let specifier = self
+				.text(path)
+				.trim_matches(|c| c == '"' || c == '`')
+				.to_owned();
+			let alias = spec
+				.child_by_field_name("name")
+				.map(|n| self.text(n).to_owned());
 			self.imports.push(ImportTag {
 				specifier,
 				kind: "import".to_owned(),
@@ -938,7 +1028,9 @@ impl<'a> Walker<'a> {
 		let row = node.start_position().row;
 		match node.kind() {
 			"call_expression" => {
-				let Some(func) = node.child_by_field_name("function") else { return };
+				let Some(func) = node.child_by_field_name("function") else {
+					return;
+				};
 				match func.kind() {
 					"identifier" => self.push_ref(self.text(func), None, "call", row, ctx),
 					"selector_expression" => {
@@ -954,7 +1046,9 @@ impl<'a> Walker<'a> {
 			},
 			"type_identifier" => self.push_ref(self.text(node), None, "type", row, ctx),
 			"qualified_type" => {
-				if let (Some(p), Some(n)) = (node.child_by_field_name("package"), node.child_by_field_name("name")) {
+				if let (Some(p), Some(n)) =
+					(node.child_by_field_name("package"), node.child_by_field_name("name"))
+				{
 					self.push_ref(self.text(n), Some(self.text(p).to_owned()), "type", row, ctx);
 				}
 			},
@@ -977,7 +1071,11 @@ impl<'a> Walker<'a> {
 				true
 			},
 			"function_item" | "function_signature_item" => {
-				let kind = if ctx.parent.is_some() && ctx.prefix_is_type() { "method" } else { "function" };
+				let kind = if ctx.parent.is_some() && ctx.prefix_is_type() {
+					"method"
+				} else {
+					"function"
+				};
 				self.rust_decl(node, kind, ctx, false);
 				true
 			},
@@ -1044,7 +1142,8 @@ impl<'a> Walker<'a> {
 			exported,
 		};
 		let index = self.push_symbol(&decl, ctx);
-		let body = matches!(kind, "function" | "method" | "const" | "type" | "macro" | "struct" | "enum");
+		let body =
+			matches!(kind, "function" | "method" | "const" | "type" | "macro" | "struct" | "enum");
 		let mut inner = self.inner_ctx(ctx, index, container, body);
 		if kind == "trait" {
 			inner.type_container = true;
@@ -1057,7 +1156,9 @@ impl<'a> Walker<'a> {
 	/// `impl [Trait for] Type { … }`: members become `Type.member`, with the
 	/// trait kept in `detail`. The impl block itself is not a symbol.
 	fn rust_impl(&mut self, node: Node, ctx: &Ctx) {
-		let Some(ty) = node.child_by_field_name("type") else { return };
+		let Some(ty) = node.child_by_field_name("type") else {
+			return;
+		};
 		let type_name = rust_type_base(ty).map(|n| self.text(n).to_owned());
 		let trait_name = node
 			.child_by_field_name("trait")
@@ -1070,7 +1171,11 @@ impl<'a> Walker<'a> {
 		}
 		let Some(type_name) = type_name else { return };
 		let parent = self.find_top_level(&type_name, &["struct", "enum", "trait", "type"]);
-		let prefix = if ctx.prefix.is_empty() { type_name } else { format!("{}.{type_name}", ctx.prefix) };
+		let prefix = if ctx.prefix.is_empty() {
+			type_name
+		} else {
+			format!("{}.{type_name}", ctx.prefix)
+		};
 		let impl_ctx = Ctx {
 			enclosing: ctx.enclosing,
 			parent,
@@ -1087,10 +1192,18 @@ impl<'a> Walker<'a> {
 
 	/// Flatten a `use` tree into import tags; `prefix` is the path so far.
 	fn rust_use_tree(&mut self, node: Node, prefix: &str, line: u32) {
-		let join = |a: &str, b: &str| if a.is_empty() { b.to_owned() } else { format!("{a}::{b}") };
+		let join = |a: &str, b: &str| {
+			if a.is_empty() {
+				b.to_owned()
+			} else {
+				format!("{a}::{b}")
+			}
+		};
 		match node.kind() {
 			"scoped_use_list" => {
-				let path = node.child_by_field_name("path").map_or(String::new(), |p| self.text(p).to_owned());
+				let path = node
+					.child_by_field_name("path")
+					.map_or(String::new(), |p| self.text(p).to_owned());
 				let base = join(prefix, &path);
 				if let Some(list) = node.child_by_field_name("list") {
 					self.rust_use_tree(list, &base, line);
@@ -1104,13 +1217,20 @@ impl<'a> Walker<'a> {
 				}
 			},
 			"use_as_clause" => {
-				let Some(path) = node.child_by_field_name("path") else { return };
-				let alias = node.child_by_field_name("alias").map(|a| self.text(a).to_owned());
+				let Some(path) = node.child_by_field_name("path") else {
+					return;
+				};
+				let alias = node
+					.child_by_field_name("alias")
+					.map(|a| self.text(a).to_owned());
 				let full = join(prefix, self.text(path));
 				self.rust_push_use(&full, alias, line);
 			},
 			"use_wildcard" => {
-				let text = self.text(node).trim_end_matches("::*").trim_end_matches('*');
+				let text = self
+					.text(node)
+					.trim_end_matches("::*")
+					.trim_end_matches('*');
 				let full = join(prefix, text.trim_end_matches("::"));
 				self.imports.push(ImportTag {
 					specifier: full,
@@ -1132,7 +1252,9 @@ impl<'a> Walker<'a> {
 		let (spec, last) = full.rsplit_once("::").unwrap_or(("", full));
 		let (spec, imported) = if last == "self" {
 			// `use a::b::{self}` binds `b`.
-			spec.rsplit_once("::").map_or((String::new(), spec.to_owned()), |(s, l)| (s.to_owned(), l.to_owned()))
+			spec
+				.rsplit_once("::")
+				.map_or_else(|| (String::new(), spec.to_owned()), |(s, l)| (s.to_owned(), l.to_owned()))
 		} else {
 			(spec.to_owned(), last.to_owned())
 		};
@@ -1150,20 +1272,29 @@ impl<'a> Walker<'a> {
 		let row = node.start_position().row;
 		match node.kind() {
 			"call_expression" => {
-				let Some(mut func) = node.child_by_field_name("function") else { return };
+				let Some(mut func) = node.child_by_field_name("function") else {
+					return;
+				};
 				if func.kind() == "generic_function" {
-					let Some(inner) = func.child_by_field_name("function") else { return };
+					let Some(inner) = func.child_by_field_name("function") else {
+						return;
+					};
 					func = inner;
 				}
 				match func.kind() {
 					"identifier" => self.push_ref(self.text(func), None, "call", row, ctx),
 					"scoped_identifier" => {
-						let name = func.child_by_field_name("name").map_or("", |n| self.text(n));
-						let path = func.child_by_field_name("path").map(|p| self.text(p).to_owned());
+						let name = func
+							.child_by_field_name("name")
+							.map_or("", |n| self.text(n));
+						let path = func
+							.child_by_field_name("path")
+							.map(|p| self.text(p).to_owned());
 						self.push_ref(name, path, "call", row, ctx);
 					},
 					"field_expression" => {
-						if let (Some(v), Some(f)) = (func.child_by_field_name("value"), func.child_by_field_name("field"))
+						if let (Some(v), Some(f)) =
+							(func.child_by_field_name("value"), func.child_by_field_name("field"))
 						{
 							let q = Some(self.text(v).to_owned()).filter(|q| q.len() <= 80);
 							self.push_ref(self.text(f), q, "call", row, ctx);
@@ -1175,14 +1306,18 @@ impl<'a> Walker<'a> {
 			"macro_invocation" => {
 				if let Some(m) = node.child_by_field_name("macro") {
 					let text = self.text(m);
-					let (q, n) = text.rsplit_once("::").map_or((None, text), |(q, n)| (Some(q.to_owned()), n));
+					let (q, n) = text
+						.rsplit_once("::")
+						.map_or((None, text), |(q, n)| (Some(q.to_owned()), n));
 					self.push_ref(n, q, "macro", row, ctx);
 				}
 			},
 			"type_identifier" => self.push_ref(self.text(node), None, "type", row, ctx),
 			"scoped_type_identifier" => {
 				if let Some(n) = node.child_by_field_name("name") {
-					let path = node.child_by_field_name("path").map(|p| self.text(p).to_owned());
+					let path = node
+						.child_by_field_name("path")
+						.map(|p| self.text(p).to_owned());
 					self.push_ref(self.text(n), path, "type", row, ctx);
 				}
 			},
@@ -1194,7 +1329,8 @@ impl<'a> Walker<'a> {
 
 	/// Index of a top-level symbol named `name` with one of `kinds`.
 	fn find_top_level(&self, name: &str, kinds: &[&str]) -> Option<u32> {
-		self.symbols
+		self
+			.symbols
 			.iter()
 			.position(|s| s.parent.is_none() && s.name == name && kinds.contains(&s.kind.as_str()))
 			.map(|i| i as u32)
@@ -1223,7 +1359,9 @@ fn rust_type_base(node: Node) -> Option<Node> {
 		"type_identifier" => Some(node),
 		"generic_type" => node.child_by_field_name("type").and_then(rust_type_base),
 		"scoped_type_identifier" => node.child_by_field_name("name"),
-		"reference_type" | "pointer_type" => node.child_by_field_name("type").and_then(rust_type_base),
+		"reference_type" | "pointer_type" => {
+			node.child_by_field_name("type").and_then(rust_type_base)
+		},
 		_ => None,
 	}
 }
@@ -1235,6 +1373,10 @@ fn collect_descendants<'t>(node: Node<'t>, kinds: &[&str]) -> Vec<Node<'t>> {
 	let mut stack = vec![node];
 	while let Some(n) = stack.pop() {
 		let mut cursor = n.walk();
+		#[expect(
+			clippy::needless_collect,
+			reason = "the children iterator is not double-ended; `.rev()` needs a Vec"
+		)]
 		let children: Vec<Node> = n.named_children(&mut cursor).collect();
 		for child in children.into_iter().rev() {
 			if kinds.contains(&child.kind()) {
@@ -1258,14 +1400,16 @@ fn body_start(node: Node) -> Option<usize> {
 	for child in node.named_children(&mut cursor) {
 		if child.kind() == "variable_declarator"
 			&& let Some(value) = child.child_by_field_name("value")
-				&& let Some(b) = value.child_by_field_name("body") {
-					return Some(b.start_byte());
-				}
-	}
-	if let Some(value) = node.child_by_field_name("value")
-		&& let Some(b) = value.child_by_field_name("body") {
+			&& let Some(b) = value.child_by_field_name("body")
+		{
 			return Some(b.start_byte());
 		}
+	}
+	if let Some(value) = node.child_by_field_name("value")
+		&& let Some(b) = value.child_by_field_name("body")
+	{
+		return Some(b.start_byte());
+	}
 	None
 }
 
@@ -1273,7 +1417,11 @@ fn body_start(node: Node) -> Option<usize> {
 /// (trailing newline inside the node) ends on the previous row.
 fn content_end_row(node: Node) -> usize {
 	let end = node.end_position();
-	if end.column == 0 && end.row > node.start_position().row { end.row - 1 } else { end.row }
+	if end.column == 0 && end.row > node.start_position().row {
+		end.row - 1
+	} else {
+		end.row
+	}
 }
 
 fn truncate_chars(text: &str, max: usize) -> String {

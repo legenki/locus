@@ -1,12 +1,18 @@
 use super::*;
 
 fn tags(code: &str, path: &str) -> FileTags {
-	extract_tags(TagsOptions { code: code.to_owned(), lang: None, path: Some(path.to_owned()) }).unwrap()
+	extract_tags(TagsOptions { code: code.to_owned(), lang: None, path: Some(path.to_owned()) })
+		.unwrap()
 }
 
 fn sym<'a>(t: &'a FileTags, qname: &str) -> &'a SymbolTag {
 	let found: Vec<&SymbolTag> = t.symbols.iter().filter(|s| s.qname == qname).collect();
-	assert_eq!(found.len(), 1, "expected one `{qname}`, got {:?}", t.symbols.iter().map(|s| &s.qname).collect::<Vec<_>>());
+	assert_eq!(
+		found.len(),
+		1,
+		"expected one `{qname}`, got {:?}",
+		t.symbols.iter().map(|s| &s.qname).collect::<Vec<_>>()
+	);
 	found[0]
 }
 
@@ -44,7 +50,15 @@ export class UserStore {
 	assert_eq!(fetch.kind, "method");
 	assert_eq!((fetch.start_line, fetch.end_line, fetch.name_line), (7, 11, 9));
 	assert_eq!(fetch.signature, "async fetch(id: Id): Promise<User>");
-	assert_eq!(fetch.parent, Some(t.symbols.iter().position(|s| s.qname == "UserStore").unwrap() as u32));
+	assert_eq!(
+		fetch.parent,
+		Some(
+			t.symbols
+				.iter()
+				.position(|s| s.qname == "UserStore")
+				.unwrap() as u32
+		)
+	);
 	assert_eq!(sym(&t, "UserStore.cache").kind, "property");
 	assert_eq!(&code[class.start_byte as usize..class.start_byte as usize + 3], "/**");
 }
@@ -80,18 +94,21 @@ const legacy = require('legacy');
 	let by_spec = |s: &str| t.imports.iter().find(|i| i.specifier == s).unwrap();
 	let x = by_spec("./x");
 	assert_eq!(x.kind, "import");
-	assert_eq!(
-		x.names,
-		vec![
-			ImportName { imported: "default".into(), local: "def".into() },
-			ImportName { imported: "a".into(), local: "a".into() },
-			ImportName { imported: "b".into(), local: "c".into() },
-		]
-	);
-	assert_eq!(by_spec("../y").names, vec![ImportName { imported: "*".into(), local: "ns".into() }]);
+	assert_eq!(x.names, vec![
+		ImportName { imported: "default".into(), local: "def".into() },
+		ImportName { imported: "a".into(), local: "a".into() },
+		ImportName { imported: "b".into(), local: "c".into() },
+	]);
+	assert_eq!(by_spec("../y").names, vec![ImportName {
+		imported: "*".into(),
+		local:    "ns".into(),
+	}]);
 	assert!(by_spec("./side-effect").names.is_empty());
 	let z = by_spec("./z");
-	assert_eq!((z.kind.as_str(), z.names[0].imported.as_str(), z.names[0].local.as_str()), ("reexport", "z", "w"));
+	assert_eq!(
+		(z.kind.as_str(), z.names[0].imported.as_str(), z.names[0].local.as_str()),
+		("reexport", "z", "w")
+	);
 	assert_eq!(by_spec("./all").names[0].imported, "*");
 	assert_eq!(by_spec("./lazy").kind, "dynamic");
 	assert_eq!(by_spec("legacy").kind, "dynamic");
@@ -112,7 +129,12 @@ export const handler = (req: Request) => {
 	assert_eq!(qnames(&t), vec!["handler"]);
 	assert_eq!(t.symbols[0].kind, "function");
 	let handler = Some(0);
-	let r = |name: &str| t.refs.iter().find(|r| r.name == name).unwrap_or_else(|| panic!("no ref {name}"));
+	let r = |name: &str| {
+		t.refs
+			.iter()
+			.find(|r| r.name == name)
+			.unwrap_or_else(|| panic!("no ref {name}"))
+	};
 	assert_eq!((r("validate").count, r("validate").enclosing), (2, handler));
 	assert_eq!(r("Response").kind, "new");
 	assert_eq!(r("send").qualifier.as_deref(), Some("api"));
@@ -156,7 +178,10 @@ const (
 	assert!(!t.has_errors);
 	let store = sym(&t, "Store");
 	// The `//` doc comment directly above is part of the range.
-	assert_eq!((store.kind.as_str(), store.start_line, store.name_line, store.exported), ("struct", 8, 9, true));
+	assert_eq!(
+		(store.kind.as_str(), store.start_line, store.name_line, store.exported),
+		("struct", 8, 9, true)
+	);
 	let get = sym(&t, "Store.Get");
 	assert_eq!(get.kind, "method");
 	assert_eq!(get.parent, Some(t.symbols.iter().position(|s| s.qname == "Store").unwrap() as u32));
@@ -164,10 +189,25 @@ const (
 	assert!(!sym(&t, "List.len").exported);
 	assert_eq!(sym(&t, "reader.Read").kind, "method");
 	assert!(sym(&t, "MaxUsers").exported && !sym(&t, "minUsers").exported);
-	let db = t.imports.iter().find(|i| i.specifier == "example.com/app/internal/db").unwrap();
+	let db = t
+		.imports
+		.iter()
+		.find(|i| i.specifier == "example.com/app/internal/db")
+		.unwrap();
 	assert_eq!(db.alias.as_deref(), Some("db"));
 	let q = t.refs.iter().find(|r| r.name == "Query").unwrap();
-	assert_eq!((q.qualifier.as_deref(), q.enclosing), (Some("db"), Some(t.symbols.iter().position(|s| s.qname == "Store.Get").unwrap() as u32)));
+	assert_eq!(
+		(q.qualifier.as_deref(), q.enclosing),
+		(
+			Some("db"),
+			Some(
+				t.symbols
+					.iter()
+					.position(|s| s.qname == "Store.Get")
+					.unwrap() as u32
+			)
+		)
+	);
 }
 
 // Rust: methods from inherent and trait impls share `Type.method` (so the
@@ -204,7 +244,10 @@ pub trait Rank {
 	let t = tags(code, "src/node.rs");
 	assert!(!t.has_errors);
 	let node = sym(&t, "Node");
-	assert_eq!((node.kind.as_str(), node.exported, node.start_line, node.end_line), ("struct", true, 6, 8));
+	assert_eq!(
+		(node.kind.as_str(), node.exported, node.start_line, node.end_line),
+		("struct", true, 6, 8)
+	);
 	let fmts: Vec<_> = t.symbols.iter().filter(|s| s.qname == "Node.fmt").collect();
 	assert_eq!(fmts.len(), 2);
 	assert_eq!(fmts[0].detail, None);
@@ -216,7 +259,11 @@ pub trait Rank {
 	let uses: Vec<(&str, &str, &str)> = t
 		.imports
 		.iter()
-		.flat_map(|i| i.names.iter().map(move |n| (i.specifier.as_str(), n.imported.as_str(), n.local.as_str())))
+		.flat_map(|i| {
+			i.names
+				.iter()
+				.map(move |n| (i.specifier.as_str(), n.imported.as_str(), n.local.as_str()))
+		})
 		.collect();
 	assert_eq!(uses, vec![
 		("std", "fmt", "fmt"),
@@ -224,10 +271,18 @@ pub trait Rank {
 		("crate::graph", "Edge", "E"),
 		("crate::graph::rank", "*", "*"),
 	]);
-	assert!(t.imports.iter().any(|i| i.kind == "mod" && i.specifier == "parser"));
+	assert!(
+		t.imports
+			.iter()
+			.any(|i| i.kind == "mod" && i.specifier == "parser")
+	);
 	let label = t.refs.iter().find(|r| r.name == "label").unwrap();
 	assert_eq!(label.qualifier.as_deref(), Some("graph"));
-	assert!(t.refs.iter().any(|r| r.name == "write" && r.kind == "macro"));
+	assert!(
+		t.refs
+			.iter()
+			.any(|r| r.name == "write" && r.kind == "macro")
+	);
 }
 
 // Multi-line heads collapse to one tidy line; `export` is implied, never shown.

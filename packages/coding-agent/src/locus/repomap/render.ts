@@ -18,6 +18,8 @@ export const MAX_MAP_BUDGET = 8000;
 const CHARS_PER_TOKEN = 3.5;
 /** Members shown per focus file before the budget search takes over. */
 const FOCUS_SYMBOL_CAP = 40;
+/** Ranked candidates kept for the budget pass; far above what 8k tokens can show. */
+const MAX_RANKED = 4000;
 
 export function estimateTokens(text: string): number {
 	return Math.ceil(text.length / CHARS_PER_TOKEN);
@@ -32,12 +34,6 @@ export interface MapOptions {
 	boosts?: Map<string, number>;
 	/** Shown in the footer, e.g. "partial". */
 	status?: string;
-}
-
-interface Entry {
-	sym: SymbolRow;
-	score: number;
-	forced: boolean;
 }
 
 interface FileInfo {
@@ -100,7 +96,12 @@ interface RenderData {
 	perFileCount: Map<number, number>;
 	dependents: Map<number, number>;
 	callCaller: Int32Array;
-	callCallee: Int32Array;
+	/** Callee position in `symbols` (-1 when unknown). */
+	callCalleeIdx: Int32Array;
+	indexById: Map<number, number>;
+	symbolsByFile: Map<number, number[]>;
+	/** Positions of exported symbols in `symbols`. */
+	exportedIdx: Int32Array;
 	callCount: Float64Array;
 	outCalls: Map<number, number>;
 	graph: RankGraph;
@@ -122,13 +123,23 @@ function getRenderData(store: IndexStore): RenderData {
 			"SELECT caller_file_id, callee_symbol_id, count FROM calls",
 		)
 		.all();
+	const indexById = new Map<number, number>();
+	const symbolsByFile = new Map<number, number[]>();
+	const exported: number[] = [];
+	symbols.forEach((sym, i) => {
+		indexById.set(sym.id, i);
+		const list = symbolsByFile.get(sym.file_id);
+		if (list) list.push(i);
+		else symbolsByFile.set(sym.file_id, [i]);
+		if (sym.exported) exported.push(i);
+	});
 	const callCaller = new Int32Array(callRows.length);
-	const callCallee = new Int32Array(callRows.length);
+	const callCalleeIdx = new Int32Array(callRows.length);
 	const callCount = new Float64Array(callRows.length);
 	const outCalls = new Map<number, number>();
 	callRows.forEach((c, i) => {
 		callCaller[i] = c.caller_file_id;
-		callCallee[i] = c.callee_symbol_id;
+		callCalleeIdx[i] = indexById.get(c.callee_symbol_id) ?? -1;
 		callCount[i] = c.count;
 		outCalls.set(c.caller_file_id, (outCalls.get(c.caller_file_id) ?? 0) + c.count);
 	});
@@ -148,7 +159,10 @@ function getRenderData(store: IndexStore): RenderData {
 				.map(r => [r.dst_file, r.n]),
 		),
 		callCaller,
-		callCallee,
+		callCalleeIdx,
+		indexById,
+		symbolsByFile,
+		exportedIdx: Int32Array.from(exported),
 		callCount,
 		outCalls,
 		graph: loadRankGraph(store),
@@ -220,85 +234,128 @@ export function renderMap(store: IndexStore, options: MapOptions = {}): string {
 
 	// Symbol score: file rank flowing through calls into it, plus a share of
 	// its own file's rank (exported symbols only, unless private allowed).
-	const inflow = new Map<number, number>();
+	const inflow = new Float64Array(symbols.length);
 	for (let i = 0; i < data.callCaller.length; i++) {
 		const caller = data.callCaller[i] ?? 0;
+		const callee = data.callCalleeIdx[i] ?? -1;
+		if (callee < 0) continue;
 		const r = info.get(caller)?.rank ?? 0;
-		const share = (r * (data.callCount[i] ?? 0)) / (data.outCalls.get(caller) ?? 1);
-		const callee = data.callCallee[i] ?? 0;
-		inflow.set(callee, (inflow.get(callee) ?? 0) + share);
+		inflow[callee] = (inflow[callee] ?? 0) + (r * (data.callCount[i] ?? 0)) / (data.outCalls.get(caller) ?? 1);
 	}
 
-	const entries: Entry[] = [];
+	// Candidates: exported symbols, plus every symbol of focus files (and all
+	// symbols with includePrivate). Scores in a typed array; no per-symbol objects.
+	const focusSymbolIdx = [...focusSymbols].flatMap(id => data.indexById.get(id) ?? []);
+	let candidates: Int32Array;
+	if (options.includePrivate) {
+		candidates = Int32Array.from({ length: symbols.length }, (_, i) => i);
+	} else {
+		const extra: number[] = [...focusSymbolIdx];
+		for (const id of focusFiles)
+			for (const i of data.symbolsByFile.get(id) ?? []) if (!symbols[i]!.exported) extra.push(i);
+		const merged = new Int32Array(data.exportedIdx.length + extra.length);
+		merged.set(data.exportedIdx);
+		merged.set(extra, data.exportedIdx.length);
+		candidates = merged;
+	}
+	const fileRank = (fileId: number) => info.get(fileId)?.rank ?? 0;
+	const scores = new Float64Array(candidates.length);
+	const forced = new Uint8Array(candidates.length);
 	const forcedPerFile = new Map<number, number>();
-	for (const s of symbols) {
-		const focused = focusFiles.has(s.file_id) || focusSymbols.has(s.id);
-		if (!s.exported && !options.includePrivate && !focused) continue;
-		const fileRank = info.get(s.file_id)?.rank ?? 0;
-		let score = (inflow.get(s.id) ?? 0) + fileRank / Math.max(1, perFileCount.get(s.file_id) ?? 1);
+	const focusSymbolSet = new Set(focusSymbolIdx);
+	const seen = new Set<number>();
+	for (let c = 0; c < candidates.length; c++) {
+		const i = candidates[c]!;
+		if (seen.has(i)) {
+			scores[c] = -1;
+			continue;
+		}
+		seen.add(i);
+		const s = symbols[i]!;
+		let score = (inflow[i] ?? 0) + fileRank(s.file_id) / Math.max(1, perFileCount.get(s.file_id) ?? 1);
 		if (!s.exported) score /= 2;
-		let forced = focusSymbols.has(s.id);
-		if (!forced && focusFiles.has(s.file_id) && focusSymbols.size === 0) {
+		scores[c] = score;
+		if (focusSymbolSet.has(i)) forced[c] = 1;
+		else if (focusFiles.has(s.file_id) && focusSymbols.size === 0) {
 			const n = forcedPerFile.get(s.file_id) ?? 0;
 			if (n < FOCUS_SYMBOL_CAP && (s.exported || options.includePrivate || s.parent_id === null)) {
-				forced = true;
+				forced[c] = 1;
 				forcedPerFile.set(s.file_id, n + 1);
 			}
 		}
-		entries.push({ sym: s, score, forced });
 	}
-	entries.sort((a, b) => Number(b.forced) - Number(a.forced) || b.score - a.score || a.sym.id - b.sym.id);
 
-	const footer = (shown: number, total: number, tokens: number) =>
-		`[map: ${shown}/${total} files, ~${tokens}/${budget} tok${options.status ? `, index: ${options.status}` : ""}]`;
+	// Keep the top MAX_RANKED by score (typed-array sort for the threshold),
+	// plus everything forced; only those get an object sort.
+	let threshold = -Infinity;
+	if (candidates.length > MAX_RANKED) {
+		const sortedScores = Float64Array.from(scores).sort();
+		threshold = sortedScores[sortedScores.length - MAX_RANKED] ?? -Infinity;
+	}
+	const picked: number[] = [];
+	for (let c = 0; c < candidates.length; c++) {
+		if ((scores[c] ?? -1) < 0) continue;
+		if (forced[c] || (scores[c] ?? 0) >= threshold) picked.push(c);
+	}
+	picked.sort(
+		(a, b) =>
+			(forced[b] ?? 0) - (forced[a] ?? 0) || (scores[b] ?? 0) - (scores[a] ?? 0) || candidates[a]! - candidates[b]!,
+	);
 
-	const render = (k: number): { text: string; files: number } => {
-		const chosen = entries.slice(0, k);
-		const groups = new Map<number, SymbolRow[]>();
-		for (const e of chosen) {
-			const list = groups.get(e.sym.file_id);
-			if (list) list.push(e.sym);
-			else groups.set(e.sym.file_id, [e.sym]);
-		}
-		// Focus files always appear, even with no symbol left.
-		for (const id of focusFiles) if (!groups.has(id)) groups.set(id, []);
-		const ordered = [...groups.keys()].sort((a, b) => {
-			const fa = focusFiles.has(a) ? 1 : 0;
-			const fb = focusFiles.has(b) ? 1 : 0;
-			return fb - fa || (info.get(b)?.rank ?? 0) - (info.get(a)?.rank ?? 0) || a - b;
-		});
-		const lines: string[] = [];
-		for (const id of ordered) {
-			const f = info.get(id)!;
-			const dep = f.dependents > 0 ? `  ←${f.dependents}` : "";
-			lines.push(`${f.path}${dep}`);
-			const syms = (groups.get(id) ?? []).sort((a, b) => a.start_line - b.start_line || a.id - b.id);
-			for (const s of syms) {
-				const indent = "  ".repeat(1 + depthOf(s, byId));
-				lines.push(`${indent}${s.signature || `${s.kind} ${s.name}`}  ${lineSpan(s)}`);
-			}
-		}
-		return { text: lines.join("\n"), files: ordered.length };
+	const symbolLine = (i: number) => {
+		const s = symbols[i]!;
+		return `${"  ".repeat(1 + depthOf(s, byId))}${s.signature || `${s.kind} ${s.name}`}  ${lineSpan(s)}`;
+	};
+	const header = (fileId: number) => {
+		const f = info.get(fileId)!;
+		return f.dependents > 0 ? `${f.path}  ←${f.dependents}` : f.path;
 	};
 
-	const fits = (text: string) => estimateTokens(text) + 16 <= budget;
-	let lo = 0;
-	let hi = entries.length;
-	let best = render(0);
-	if (!fits(best.text)) {
-		// Even the headers of focus files overflow: keep them anyway.
-		return `${best.text}\n${footer(best.files, files.length, estimateTokens(best.text))}`;
+	// One pass of prefix sums: each pick costs its line, plus its file header
+	// the first time the file appears. Focus headers are always paid.
+	const budgetChars = (budget - 16) * CHARS_PER_TOKEN;
+	const headerPaid = new Set<number>(focusFiles);
+	let chars = -1;
+	for (const id of focusFiles) chars += header(id).length + 1;
+	let k = 0;
+	const lineCache = new Map<number, string>();
+	for (const c of picked) {
+		const i = candidates[c]!;
+		const fileId = symbols[i]!.file_id;
+		const line = symbolLine(i);
+		const cost = line.length + 1 + (headerPaid.has(fileId) ? 0 : header(fileId).length + 1);
+		if (chars + cost > budgetChars) break;
+		chars += cost;
+		headerPaid.add(fileId);
+		lineCache.set(i, line);
+		k++;
 	}
-	while (lo < hi) {
-		const mid = Math.ceil((lo + hi + 1) / 2);
-		const candidate = render(Math.min(mid, entries.length));
-		if (fits(candidate.text)) {
-			best = candidate;
-			lo = mid;
-		} else hi = mid - 1;
-		if (mid >= entries.length && fits(candidate.text)) break;
+
+	const groups = new Map<number, number[]>();
+	for (const id of focusFiles) groups.set(id, []);
+	for (const c of picked.slice(0, k)) {
+		const i = candidates[c]!;
+		const fileId = symbols[i]!.file_id;
+		const list = groups.get(fileId);
+		if (list) list.push(i);
+		else groups.set(fileId, [i]);
 	}
-	return `${best.text}\n${footer(best.files, files.length, estimateTokens(best.text))}`;
+	const ordered = [...groups.keys()].sort((a, b) => {
+		const fa = focusFiles.has(a) ? 1 : 0;
+		const fb = focusFiles.has(b) ? 1 : 0;
+		return fb - fa || fileRank(b) - fileRank(a) || a - b;
+	});
+	const lines: string[] = [];
+	for (const id of ordered) {
+		lines.push(header(id));
+		const list = (groups.get(id) ?? []).sort(
+			(a, b) => symbols[a]!.start_line - symbols[b]!.start_line || symbols[a]!.id - symbols[b]!.id,
+		);
+		for (const i of list) lines.push(lineCache.get(i) ?? symbolLine(i));
+	}
+	const text = lines.join("\n");
+	const footer = `[map: ${ordered.length}/${files.length} files, ~${estimateTokens(text)}/${budget} tok${options.status ? `, index: ${options.status}` : ""}]`;
+	return `${text}\n${footer}`;
 }
 
 // ── importers ───────────────────────────────────────────────────────────
