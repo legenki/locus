@@ -2115,6 +2115,29 @@ export interface ExtractSegmentsResult {
   afterWidth: number
 }
 
+/**
+ * Extract symbols, imports and references from one file on the calling
+ * thread. Prefer [`extract_tags_async`] for bulk indexing.
+ */
+export declare function extractTags(options: TagsOptions): FileTags
+
+/** Same as [`extract_tags`], on libuv's thread pool. */
+export declare function extractTagsAsync(options: TagsOptions): Promise<FileTags>
+
+export interface FileTags {
+  /** Canonical language name. */
+  language?: string
+  /** Whether the language has a tags walker (TS/TSX/JS, Go, Rust). */
+  supported: boolean
+  /** Whether the tree contains ERROR or MISSING nodes. */
+  hasErrors: boolean
+  /** Total line count. */
+  lineCount: number
+  symbols: Array<SymbolTag>
+  imports: Array<ImportTag>
+  refs: Array<RefTag>
+}
+
 /** Resolved filesystem entry kind for glob filters and match metadata. */
 export declare enum FileType {
   /** Regular file. */
@@ -2541,6 +2564,26 @@ export interface HtmlToMarkdownOptions {
    * "all" also keeps `<template>` and `<noscript>` content.
    */
   hiddenContent?: string
+}
+
+export interface ImportName {
+  /** Exported name (`*` for namespace/glob, `default` for default imports). */
+  imported: string
+  /** Local binding. */
+  local: string
+}
+
+export interface ImportTag {
+  /** Module specifier as written. */
+  specifier: string
+  /** `import`, `reexport`, `dynamic`, `use` or `mod`. */
+  kind: string
+  /** Bound names. */
+  names: Array<ImportName>
+  /** Go import alias. */
+  alias?: string
+  /** 1-indexed line. */
+  line: number
 }
 
 /** One stray sloppy payload region inside prose (UTF-16 offsets). */
@@ -3377,6 +3420,21 @@ export declare function readImageFromClipboard(): Promise<ClipboardImage | undef
  */
 export declare function readTextFromClipboard(): Promise<string | undefined | null>
 
+export interface RefTag {
+  /** Referenced name (last path segment). */
+  name: string
+  /** Leading path or receiver as written. */
+  qualifier?: string
+  /** `call`, `new`, `macro` or `type`. */
+  kind: string
+  /** Index of the innermost enclosing symbol in `symbols`. */
+  enclosing?: number
+  /** 1-indexed line of the first occurrence. */
+  line: number
+  /** Folded occurrence count. */
+  count: number
+}
+
 /**
  * Render Mermaid diagram text (flowchart, state, sequence, class, ER, or
  * xychart) to ASCII/Unicode art. Synchronous: callers render inside the
@@ -4056,6 +4114,48 @@ export declare function supportsLanguage(lang: string): boolean
 export interface SvgCell {
   widthPx: number
   heightPx: number
+}
+
+export interface SymbolTag {
+  /** Bare declared name. */
+  name: string
+  /** Dotted container path plus name (`UserStore.fetch`). */
+  qname: string
+  /**
+   * `function`, `method`, `class`, `struct`, `interface`, `trait`, `type`,
+   * `enum`, `const`, `var`, `module`, `macro` or `property`.
+   */
+  kind: string
+  /**
+   * 1-indexed inclusive first line of the edit range (docs, decorators and
+   * attributes included).
+   */
+  startLine: number
+  /** 1-indexed inclusive last line of the edit range. */
+  endLine: number
+  /** Byte offset of the edit range start. */
+  startByte: number
+  /** Byte offset one past the edit range end. */
+  endByte: number
+  /** 1-indexed line of the declared name. */
+  nameLine: number
+  /** Visible outside its module. */
+  exported: boolean
+  /** Declaration head, whitespace collapsed, body omitted. */
+  signature: string
+  /** Index of the container symbol in `symbols`. */
+  parent?: number
+  /** Trait of a Rust `impl Trait for Type` member. */
+  detail?: string
+}
+
+export interface TagsOptions {
+  /** Source code to inspect. */
+  code: string
+  /** Language alias (e.g. "rust", "typescript") used before path inference. */
+  lang?: string
+  /** File path used to infer language by extension when `lang` is omitted. */
+  path?: string
 }
 
 /** Options for [`TextPredictor::new`]. */

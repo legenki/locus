@@ -8,6 +8,7 @@ pub mod ops;
 pub mod parse_cache;
 pub mod search;
 pub mod summary;
+pub mod tags; // locus
 #[cfg(test)]
 mod testing;
 

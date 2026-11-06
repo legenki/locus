@@ -58,6 +58,7 @@ import { EvalTool } from "./eval";
 import { resolveEvalBackends } from "./eval-backends";
 import { GithubTool } from "./gh";
 import { GlobTool } from "./glob";
+import { MapTool } from "../locus/map-tool"; // locus
 import { GrepTool } from "./grep";
 import { IdaTool } from "./ida";
 import { isIrcEnabled } from "../irc/messaging";
@@ -618,6 +619,7 @@ export const BUILTIN_TOOLS: Record<BuiltinToolName, ToolFactory> = {
 	reflect: MemoryReflectTool.createIf,
 	learn: LearnTool.createIf,
 	manage_skill: ManageSkillTool.createIf,
+	map: s => new MapTool(s), // locus
 };
 
 export const HIDDEN_TOOLS: Record<HiddenToolName, ToolFactory> = {
