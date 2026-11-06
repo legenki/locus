@@ -99,3 +99,6 @@ packages/coding-agent/bench/boot-baseline.json
 /.bazelrc.user
 
 .parity/
+
+# locus: edit benchmark run logs
+packages/metaharness/runs/

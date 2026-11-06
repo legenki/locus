@@ -137,6 +137,7 @@ Options:
   --max-tasks <n>            Max tasks to sample evenly (default: 80, 0 = all)
   --fixtures <path>          Fixtures directory or .tar.gz archive (default: built-in)
   --edit-variant <v>         Edit variant, e.g. hashline, replace, apply_patch (default: auto)
+  --extra-tools <names>      Extra tools beside read/edit/write/apply_patch, e.g. edit_symbol (locus)
   --edit-fuzzy <bool>        Fuzzy matching: true, false, auto
   --edit-fuzzy-threshold <n> Fuzzy threshold 0-1 or auto
   --guided                   Include an authoritative suggested edit payload
@@ -179,6 +180,8 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
 			"max-tasks": { type: "string", default: "80" },
 			fixtures: { type: "string" },
 			"edit-variant": { type: "string" },
+			// locus: extra tools on top of read/edit/write/apply_patch, e.g. `edit_symbol`.
+			"extra-tools": { type: "string" },
 			"edit-fuzzy": { type: "string" },
 			"edit-fuzzy-threshold": { type: "string" },
 			guided: { type: "boolean", default: false },
@@ -261,6 +264,8 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
 		};
 		const editVariant = values["edit-variant"];
 		if (editVariant) config.editVariant = editVariant;
+		const extraTools = values["extra-tools"];
+		if (extraTools) config.extraTools = extraTools.split(",").map(t => t.trim()).filter(Boolean); // locus
 		const editFuzzy = parseFuzzy(values["edit-fuzzy"]);
 		if (editFuzzy !== undefined) config.editFuzzy = editFuzzy;
 		const editFuzzyThreshold = parseFuzzyThreshold(values["edit-fuzzy-threshold"]);
@@ -284,6 +289,7 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
 		log(`Task concurrency: ${config.taskConcurrency}`);
 		log(`Guided mode: ${config.guided ? "enabled" : "disabled"}`);
 		if (config.editVariant) log(`Edit variant: ${config.editVariant}`);
+		if (config.extraTools?.length) log(`Extra tools: ${config.extraTools.join(", ")}`); // locus
 		if (config.editFuzzy !== undefined) log(`Edit fuzzy: ${config.editFuzzy}`);
 		if (config.editFuzzyThreshold !== undefined) log(`Edit fuzzy threshold: ${config.editFuzzyThreshold}`);
 		log(`Tasks: ${tasks.length}`);

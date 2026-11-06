@@ -98,6 +98,8 @@ export interface BenchmarkConfig {
 	/** If true, abort the agent loop as soon as the formatted file content matches the expected fixture. Default: true. */
 	earlyStopOnMatch?: boolean;
 	editVariant?: string;
+	/** locus: tools added to {@link BENCHMARK_TOOL_NAMES} (e.g. `edit_symbol`). */
+	extraTools?: string[];
 	editFuzzy?: boolean | "auto";
 	editFuzzyThreshold?: number | "auto";
 	guided?: boolean;
@@ -263,7 +265,8 @@ const BENCHMARK_TOOL_NAMES = ["read", "edit", "write", "apply_patch"] as const;
 const EDIT_TOOL_NAMES = ["edit", "apply_patch"] as const;
 
 function isEditTool(toolName: unknown): toolName is (typeof EDIT_TOOL_NAMES)[number] {
-	return toolName === "edit" || toolName === "vim" || toolName === "apply_patch";
+	// locus: `edit_symbol` counts as an edit for success/failure accounting.
+	return toolName === "edit" || toolName === "vim" || toolName === "apply_patch" || toolName === "edit_symbol";
 }
 
 function isMutationTool(toolName: unknown): boolean {
@@ -762,7 +765,7 @@ function buildBenchmarkRpcArgs(config: BenchmarkConfig, multiFile: boolean, prov
 		"--append-system-prompt",
 		buildBenchmarkSystemPrompt({ multiFile, config }),
 		"--tools",
-		BENCHMARK_TOOL_NAMES.join(","),
+		[...BENCHMARK_TOOL_NAMES, ...(config.extraTools ?? [])].join(","), // locus
 		"--no-skills",
 		"--no-title",
 		"--no-rules",
@@ -1076,7 +1079,7 @@ async function runSingleTask(
 					cwd,
 					model: config.model,
 					appendSystemPrompt: buildBenchmarkSystemPrompt({ multiFile: false, config }),
-					tools: [...BENCHMARK_TOOL_NAMES],
+					tools: [...BENCHMARK_TOOL_NAMES, ...(config.extraTools ?? [])], // locus
 					editVariant: config.editVariant,
 					editFuzzy: config.editFuzzy,
 					editFuzzyThreshold: config.editFuzzyThreshold,

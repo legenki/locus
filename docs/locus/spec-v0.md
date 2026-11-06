@@ -331,3 +331,27 @@ edit_symbol({
 3. В промпт `edit` добавить строку «целые символы → `edit_symbol`». Сейчас эта подсказка есть только в промпте самого `edit_symbol`, чтобы не трогать upstream-промпты.
 4. Бенчмарк на `typescript-edit-benchmark` (§5, п. 8).
 5. Известные слепые зоны: вызовы методов на значениях, тела Rust-макросов, `export default <expr>`.
+
+### Бенчмарк `edit_symbol` против hashline (2026-11-06)
+
+**Статус: инфраструктура готова, прогон заблокирован квотой.** Запуск на `google/gemini-3.5-flash` упёрся в лимит бесплатного тарифа Gemini: 20 запросов в сутки на модель (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`). Из 48 прогонов символьного набора 45 получили 429, поэтому собранные цифры невалидны и не приводятся. Для полного сравнения нужно около 1000 запросов: платный тариф Gemini или ключ другого провайдера.
+
+**Что сделано:**
+
+- `packages/metaharness/adapters/edit`: флаг `--extra-tools edit_symbol` добавляет инструменты к фиксированному набору `read/edit/write/apply_patch`. `edit_symbol` учитывается как правка в метриках успеха и ошибок.
+- `packages/typescript-edit-benchmark/src/locus-symbol-tasks.ts` генерирует задачи на целые символы из `expected/` штатных фикстур: замена функции или метода данной реализацией (локальная переменная переименована по всему телу и добавлена строка в начало тела), удаление, вставка после символа. Эталоны проверены на парсинг. Готовый набор из 24 задач (12 replace, 6 delete, 6 insert) лежит в `packages/typescript-edit-benchmark/locus-symbol-fixtures.tar.gz`.
+- **Зачем отдельный набор.** Все 106 штатных задач — мелкие правки внутри тела, и на них сравнение показывает только, *мешает* ли `edit_symbol` своим присутствием. Пользу он должен давать на целых символах, а таких задач в штатном наборе нет.
+
+**Запуск** (из `packages/metaharness`, ключ провайдера в окружении):
+
+```sh
+M=google/gemini-3.5-flash   # или openrouter/…, openai/…
+common="--model $M --edit-variant hashline --task-concurrency 8"
+F=../typescript-edit-benchmark/locus-symbol-fixtures.tar.gz
+bun adapters/edit/cli.ts $common --fixtures $F --max-tasks 0 --runs 2 --output A-sym.json
+bun adapters/edit/cli.ts $common --fixtures $F --max-tasks 0 --runs 2 --extra-tools edit_symbol --output B-sym.json
+bun adapters/edit/cli.ts $common --max-tasks 0 --output A-std.json
+bun adapters/edit/cli.ts $common --max-tasks 0 --extra-tools edit_symbol --output B-std.json
+```
+
+**Сравнивать:** успех задач, токены и время на прогон, `edit`-вызовы на прогон и ошибки правок, а также долю вызовов `edit_symbol` в варианте B (по дампам `*.dump`). **Критерий из §5:** на символьном наборе B не хуже A по успеху и дешевле по output-токенам; на штатном наборе B не хуже A по успеху.
