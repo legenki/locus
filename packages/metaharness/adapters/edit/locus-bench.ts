@@ -376,7 +376,7 @@ async function status(): Promise<void> {
 
 const { positionals, values } = parseArgs({
 	allowPositionals: true,
-	options: { minutes: { type: "string", default: "110" }, models: { type: "string" } },
+	options: { minutes: { type: "string", default: "80" }, models: { type: "string" } },
 });
 const cmd = positionals[0] ?? "status";
 if (cmd === "run") await run(Number(values.minutes), values.models ? values.models.split(",") : null);

@@ -4,7 +4,8 @@
     "gemini-3.6-flash": "2026-11-08T07:59:59.711Z",
     "gemini-3.8-flash": "2026-11-08T07:59:59.693Z",
     "gemini-3.5-flash-lite": "2026-11-08T07:59:59.284Z",
-    "gemini-3.1-flash-lite": "2026-11-08T07:59:59.145Z"
+    "gemini-3.1-flash-lite": "2026-11-08T07:59:59.145Z",
+    "gemini-3-flash-preview": "2026-11-08T07:59:59.420Z"
   },
   "failures": {
     "gemini-3-flash|sym|symbol-delete-003|0|A": 1,
@@ -74,6 +75,7 @@
     "gemma-4-26b-a4b-it|sym|symbol-delete-011|1|A": 1,
     "gemma-4-26b-a4b-it|sym|symbol-delete-015|1|A": 1,
     "gemma-4-31b-it|sym|symbol-replace-010|0|A": 1,
-    "gemma-4-31b-it|sym|symbol-replace-013|0|A": 1
+    "gemma-4-31b-it|sym|symbol-replace-013|0|A": 1,
+    "gemini-3-flash-preview|sym|symbol-delete-011|0|B": 1
   }
 }
