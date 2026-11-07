@@ -11,10 +11,12 @@
     "gemma-4-26b-a4b-it|std|identifier-identifier-multi-edit-002|0|B": 1,
     "gemma-4-26b-a4b-it|std|identifier-identifier-multi-edit-004|0|B": 1,
     "gemma-4-31b-it|sym|symbol-delete-003|1|A": 1,
-    "gemma-4-26b-a4b-it|std|identifier-identifier-multi-edit-006|0|B": 1,
-    "gemma-4-26b-a4b-it|std|identifier-identifier-multi-edit-007|0|B": 1,
+    "gemma-4-26b-a4b-it|std|identifier-identifier-multi-edit-006|0|B": 2,
+    "gemma-4-26b-a4b-it|std|identifier-identifier-multi-edit-007|0|B": 2,
     "gemma-4-26b-a4b-it|std|identifier-identifier-multi-edit-008|0|B": 1,
     "gemma-4-26b-a4b-it|std|multi-composite-multi-edit-002|0|B": 1,
-    "gemma-4-26b-a4b-it|std|identifier-identifier-multi-edit-008|0|A": 1
+    "gemma-4-26b-a4b-it|std|identifier-identifier-multi-edit-008|0|A": 1,
+    "gemma-4-31b-it|std|identifier-identifier-multi-edit-003|0|A": 1,
+    "gemma-4-31b-it|std|identifier-identifier-multi-edit-006|0|B": 1
   }
 }
