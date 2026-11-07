@@ -41,13 +41,16 @@ interface ModelPlan {
 	id: string;
 	concurrency: number;
 	timeoutMs: number;
+	/** First-event timeout; slow models need more than the runner's 30 s default. */
+	connectionTimeoutMs?: number;
 	sets: Partial<Record<SetName, number>>; // set → runs per task
 }
 
 /** Free-tier plan (see docs/locus/spec-v0.md §8). */
 const MODELS: ModelPlan[] = [
-	{ id: "gemma-4-31b-it", concurrency: 4, timeoutMs: 420_000, sets: { sym: 2, std: 1 } },
-	{ id: "gemma-4-26b-a4b-it", concurrency: 4, timeoutMs: 420_000, sets: { sym: 2, std: 1 } },
+	// Gemma: 16K tokens/minute — two in flight; first token can take > 30 s.
+	{ id: "gemma-4-31b-it", concurrency: 2, timeoutMs: 420_000, connectionTimeoutMs: 150_000, sets: { sym: 2, std: 1 } },
+	{ id: "gemma-4-26b-a4b-it", concurrency: 2, timeoutMs: 420_000, connectionTimeoutMs: 150_000, sets: { sym: 2, std: 1 } },
 	{ id: "gemini-3.5-flash-lite", concurrency: 2, timeoutMs: 180_000, sets: { sym: 2, std: 1 } },
 	{ id: "gemini-3.1-flash-lite", concurrency: 2, timeoutMs: 180_000, sets: { sym: 2, std: 1 } },
 	{ id: "gemini-3.6-flash", concurrency: 1, timeoutMs: 240_000, sets: { sym: 1 } },
@@ -171,7 +174,7 @@ async function runBatch(
 	set: SetName,
 	variant: Variant,
 	items: Item[],
-): Promise<{ results: ResultLine[]; quotaHit: boolean; broken: boolean }> {
+): Promise<{ results: ResultLine[]; quotaHit: boolean; broken: boolean; quotaItems: Set<string> }> {
 	await fs.mkdir(SCRATCH, { recursive: true });
 	const out = path.join(SCRATCH, `${m.id}-${set}-${variant}-${Date.now()}.json`);
 	const args = [
@@ -181,6 +184,7 @@ async function runBatch(
 		"--tasks", items.map(i => i.task).join(","),
 		"--runs", "1",
 		"--timeout", String(m.timeoutMs),
+		...(m.connectionTimeoutMs ? ["--connection-timeout", String(m.connectionTimeoutMs)] : []),
 		"--max-provider-retries", "1",
 		"--output", out,
 		...(set === "sym" ? ["--fixtures", SYMBOL_FIXTURES] : []),
@@ -198,9 +202,10 @@ async function runBatch(
 		const stderr = proc.stderr.toString();
 		const quotaHit = /429|quota/i.test(stdout + stderr);
 		log(`${m.id} ${set}/${variant}: no report (exit ${proc.exitCode}): ${stderr.trim().split("\n").at(-1)?.slice(0, 160) ?? ""}`);
-		return { results: [], quotaHit, broken: !quotaHit };
+		return { results: [], quotaHit, broken: !quotaHit, quotaItems: new Set(quotaHit ? items.map(key) : []) };
 	}
 	const results: ResultLine[] = [];
+	const quotaItems = new Set<string>();
 	let quotaHit = false;
 	for (const item of items) {
 		const run = report.tasks.find(t => t.id === item.task)?.runs[0] as
@@ -218,6 +223,7 @@ async function runBatch(
 		const error = String(run.error ?? "");
 		if (/429|quota|rate.?limit/i.test(error)) {
 			quotaHit = true;
+			quotaItems.add(key(item));
 			continue;
 		}
 		const ghost = run.tokens.total === 0 && run.toolCalls.read === 0 && run.toolCalls.edit === 0;
@@ -238,7 +244,7 @@ async function runBatch(
 			at: new Date().toISOString(),
 		});
 	}
-	return { results, quotaHit, broken: false };
+	return { results, quotaHit, broken: false, quotaItems };
 }
 
 async function runModel(m: ModelPlan, pairs: Item[][], deadline: number, state: State): Promise<void> {
@@ -260,7 +266,7 @@ async function runModel(m: ModelPlan, pairs: Item[][], deadline: number, state: 
 		for (const variant of [first, first === "A" ? "B" : "A"] as Variant[]) {
 			const items = sameSet.flatMap(p => p.filter(i => i.variant === variant));
 			if (items.length === 0) continue;
-			const { results, quotaHit, broken } = await runBatch(m, set, variant, items);
+			const { results, quotaHit, broken, quotaItems } = await runBatch(m, set, variant, items);
 			brokenStreak = broken ? brokenStreak + 1 : 0;
 			if (brokenStreak >= 2) {
 				log(`${m.id}: the CLI fails without a report twice in a row; stopping this model`);
@@ -283,7 +289,8 @@ async function runModel(m: ModelPlan, pairs: Item[][], deadline: number, state: 
 					await Bun.sleep(Math.min(probe.retrySeconds, 300) * 1000);
 				}
 				for (const i of items) {
-					if (!results.some(r => key(r) === key(i))) {
+					// Quota rejections say nothing about the task; only other failures count.
+					if (!quotaItems.has(key(i)) && !results.some(r => key(r) === key(i))) {
 						state.failures[key(i)] = (state.failures[key(i)] ?? 0) + 1;
 					}
 				}
