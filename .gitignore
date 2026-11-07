@@ -100,5 +100,3 @@ packages/coding-agent/bench/boot-baseline.json
 
 .parity/
 
-# locus: edit benchmark run logs
-packages/metaharness/runs/
