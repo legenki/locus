@@ -23,6 +23,12 @@
     "gemma-4-26b-a4b-it|std|structural-move-distant-block-003|0|A": 1,
     "gemma-4-26b-a4b-it|std|structural-move-distant-block-009|0|B": 1,
     "gemma-4-31b-it|std|multi-composite-multi-edit-004|0|A": 1,
-    "gemma-4-26b-a4b-it|std|structural-remove-case-label-001|0|B": 1
+    "gemma-4-26b-a4b-it|std|structural-remove-case-label-001|0|B": 1,
+    "gemma-4-26b-a4b-it|std|structural-remove-case-label-001|0|A": 1,
+    "gemma-4-31b-it|std|multi-composite-multi-edit-011|0|A": 1,
+    "gemma-4-31b-it|std|multi-composite-multi-edit-012|0|A": 1,
+    "gemma-4-31b-it|std|multi-composite-multi-edit-011|0|B": 1,
+    "gemma-4-31b-it|std|multi-composite-multi-edit-012|0|B": 1,
+    "gemma-4-31b-it|std|multi-composite-multi-edit-014|0|A": 1
   }
 }
