@@ -102,6 +102,25 @@ async function readResults(): Promise<ResultLine[]> {
 	}
 }
 
+/** Models this process drives; only their state entries are written back. */
+let ownModels = new Set<string>();
+
+/**
+ * Merge this process's entries into the state on disk: drivers for disjoint
+ * model sets may run side by side, and a blind overwrite would drop the
+ * other driver's parks.
+ */
+async function saveState(state: State): Promise<void> {
+	const disk = await readState();
+	for (const [model, until] of Object.entries(state.parkedUntil)) {
+		if (ownModels.has(model)) disk.parkedUntil[model] = until;
+	}
+	for (const [k, n] of Object.entries(state.failures)) {
+		if (ownModels.has(k.split("|")[0]!)) disk.failures[k] = n;
+	}
+	await Bun.write(STATE, `${JSON.stringify(disk, null, 2)}\n`);
+}
+
 async function readState(): Promise<State> {
 	try {
 		return (await Bun.file(STATE).json()) as State;
@@ -282,7 +301,7 @@ async function runModel(m: ModelPlan, pairs: Item[][], deadline: number, state: 
 				const probe = await probeQuota(m.id);
 				if (probe.kind === "day") {
 					state.parkedUntil[m.id] = new Date(Date.now() + probe.retrySeconds * 1000).toISOString();
-					await Bun.write(STATE, `${JSON.stringify(state, null, 2)}\n`);
+					await saveState(state);
 					log(`${m.id}: daily quota exhausted; parked until ${state.parkedUntil[m.id]}`);
 					parkedNow = true;
 					break;
@@ -312,10 +331,11 @@ async function run(minutes: number, only: string[] | null): Promise<void> {
 	const done = new Set((await readResults()).map(key));
 	for (const [k, n] of Object.entries(state.failures)) if (n >= 3) done.add(k);
 	const models = MODELS.filter(m => !only || only.includes(m.id));
+	ownModels = new Set(models.map(m => m.id));
 	const queue = await pending(models, done);
 	for (const m of models) log(`${m.id}: ${queue.get(m.id)?.reduce((a, p) => a + p.length, 0) ?? 0} runs pending`);
 	await Promise.all(models.map(m => runModel(m, queue.get(m.id) ?? [], deadline, state)));
-	await Bun.write(STATE, `${JSON.stringify(state, null, 2)}\n`);
+	await saveState(state);
 	await writeReport();
 	log("run finished");
 }
