@@ -1,6 +1,6 @@
 # locus edit benchmark: hashline (A) vs hashline + edit_symbol (B)
 
-Generated 2026-11-08T19:02:59.947Z from `results.jsonl` (1044 runs). Each model runs both variants on the same tasks; compare within a row group, never across models.
+Generated 2026-11-08T19:14:18.640Z from `results.jsonl` (1049 runs). Each model runs both variants on the same tasks; compare within a row group, never across models.
 
 | model | set | var | runs | success | tok/run | out tok/run | edits/run | edit fails | edit_symbol share | med time |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -22,8 +22,8 @@ Generated 2026-11-08T19:02:59.947Z from `results.jsonl` (1044 runs). Each model 
 | gemma-4-26b-a4b-it | std | B | 106 | 94% (100) | 17744 | 2492 | 1.28 | 31 | 1% | 204.8s |
 | gemma-4-26b-a4b-it | sym | A | 48 | 100% (48) | 4041 | 461 | 1.19 | 9 | — | 174.8s |
 | gemma-4-26b-a4b-it | sym | B | 48 | 98% (47) | 8686 | 751 | 1.25 | 12 | 34% | 239.1s |
-| gemma-4-31b-it | std | A | 102 | 99% (101) | 9796 | 1782 | 1.08 | 6 | — | 205.5s |
-| gemma-4-31b-it | std | B | 104 | 97% (101) | 10588 | 1585 | 1.07 | 6 | 0% | 219.3s |
+| gemma-4-31b-it | std | A | 105 | 99% (104) | 9808 | 1786 | 1.08 | 6 | — | 202.9s |
+| gemma-4-31b-it | std | B | 106 | 97% (103) | 10449 | 1564 | 1.07 | 6 | 0% | 219.3s |
 | gemma-4-31b-it | sym | A | 48 | 100% (48) | 6158 | 1167 | 1.19 | 9 | — | 296.4s |
 | gemma-4-31b-it | sym | B | 48 | 100% (48) | 4783 | 573 | 1.00 | 0 | 56% | 246.8s |
 
@@ -40,5 +40,5 @@ Generated 2026-11-08T19:02:59.947Z from `results.jsonl` (1044 runs). Each model 
 | gemini-3.6-flash | sym | 4 | 4 | 0 | 0 | 0 |
 | gemma-4-26b-a4b-it | std | 105 | 96 | 5 | 3 | 1 |
 | gemma-4-26b-a4b-it | sym | 48 | 47 | 1 | 0 | 0 |
-| gemma-4-31b-it | std | 102 | 98 | 3 | 1 | 0 |
+| gemma-4-31b-it | std | 105 | 101 | 3 | 1 | 0 |
 | gemma-4-31b-it | sym | 48 | 48 | 0 | 0 | 0 |
