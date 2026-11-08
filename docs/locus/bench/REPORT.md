@@ -1,31 +1,31 @@
 # locus edit benchmark: hashline (A) vs hashline + edit_symbol (B)
 
-Generated 2026-11-08T19:14:18.640Z from `results.jsonl` (1049 runs). Each model runs both variants on the same tasks; compare within a row group, never across models.
+Generated 2026-11-08T19:15:13.896Z from `results.jsonl` (1049 runs). Each model runs both variants on the same tasks; compare within a row group, never across models.
 
-| model | set | var | runs | success | tok/run | out tok/run | edits/run | edit fails | edit_symbol share | med time |
-|---|---|---|---|---|---|---|---|---|---|---|
-| gemini-2.5-flash | sym | A | 8 | 100% (8) | 1482 | 291 | 1.50 | 4 | — | 8.9s |
-| gemini-2.5-flash | sym | B | 8 | 100% (8) | 228 | 121 | 1.00 | 0 | 100% | 4.1s |
-| gemini-3-flash-preview | sym | A | 5 | 100% (5) | 3261 | 889 | 1.00 | 0 | — | 12.0s |
-| gemini-3-flash-preview | sym | B | 6 | 100% (6) | 1262 | 397 | 1.00 | 0 | 100% | 7.1s |
-| gemini-3.1-flash-lite | std | A | 58 | 100% (58) | 8415 | 1490 | 1.21 | 11 | — | 26.4s |
-| gemini-3.1-flash-lite | std | B | 56 | 98% (55) | 7623 | 1142 | 1.21 | 11 | 0% | 13.0s |
-| gemini-3.1-flash-lite | sym | A | 48 | 94% (45) | 8545 | 1383 | 1.17 | 7 | — | 18.3s |
-| gemini-3.1-flash-lite | sym | B | 48 | 100% (48) | 1772 | 1052 | 1.02 | 1 | 69% | 17.1s |
-| gemini-3.5-flash-lite | std | A | 47 | 94% (44) | 13970 | 1070 | 1.11 | 6 | — | 41.6s |
-| gemini-3.5-flash-lite | std | B | 46 | 98% (45) | 11198 | 989 | 1.04 | 2 | 0% | 7.1s |
-| gemini-3.5-flash-lite | sym | A | 48 | 92% (44) | 15275 | 2003 | 1.15 | 6 | — | 24.3s |
-| gemini-3.5-flash-lite | sym | B | 48 | 96% (46) | 6820 | 1472 | 1.06 | 1 | 35% | 8.8s |
-| gemini-3.6-flash | sym | A | 5 | 100% (5) | 7493 | 1206 | 1.00 | 0 | — | 55.4s |
-| gemini-3.6-flash | sym | B | 4 | 100% (4) | 2756 | 834 | 1.00 | 0 | 100% | 40.2s |
-| gemma-4-26b-a4b-it | std | A | 105 | 96% (101) | 13987 | 2370 | 1.32 | 30 | — | 190.0s |
-| gemma-4-26b-a4b-it | std | B | 106 | 94% (100) | 17744 | 2492 | 1.28 | 31 | 1% | 204.8s |
-| gemma-4-26b-a4b-it | sym | A | 48 | 100% (48) | 4041 | 461 | 1.19 | 9 | — | 174.8s |
-| gemma-4-26b-a4b-it | sym | B | 48 | 98% (47) | 8686 | 751 | 1.25 | 12 | 34% | 239.1s |
-| gemma-4-31b-it | std | A | 105 | 99% (104) | 9808 | 1786 | 1.08 | 6 | — | 202.9s |
-| gemma-4-31b-it | std | B | 106 | 97% (103) | 10449 | 1564 | 1.07 | 6 | 0% | 219.3s |
-| gemma-4-31b-it | sym | A | 48 | 100% (48) | 6158 | 1167 | 1.19 | 9 | — | 296.4s |
-| gemma-4-31b-it | sym | B | 48 | 100% (48) | 4783 | 573 | 1.00 | 0 | 56% | 246.8s |
+| model | set | var | runs | success | tok/run (mean) | tok/run (median) | out tok/run | edits/run | edit fails | edit_symbol share | med time |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| gemini-2.5-flash | sym | A | 8 | 100% (8) | 1482 | 1157 | 291 | 1.50 | 4 | — | 8.9s |
+| gemini-2.5-flash | sym | B | 8 | 100% (8) | 228 | 114 | 121 | 1.00 | 0 | 100% | 4.1s |
+| gemini-3-flash-preview | sym | A | 5 | 100% (5) | 3261 | 1553 | 889 | 1.00 | 0 | — | 12.0s |
+| gemini-3-flash-preview | sym | B | 6 | 100% (6) | 1262 | 1681 | 397 | 1.00 | 0 | 100% | 7.1s |
+| gemini-3.1-flash-lite | std | A | 58 | 100% (58) | 8415 | 4113 | 1490 | 1.21 | 11 | — | 26.4s |
+| gemini-3.1-flash-lite | std | B | 56 | 98% (55) | 7623 | 4641 | 1142 | 1.21 | 11 | 0% | 13.0s |
+| gemini-3.1-flash-lite | sym | A | 48 | 94% (45) | 8545 | 1412 | 1383 | 1.17 | 7 | — | 18.3s |
+| gemini-3.1-flash-lite | sym | B | 48 | 100% (48) | 1772 | 937 | 1052 | 1.02 | 1 | 69% | 17.1s |
+| gemini-3.5-flash-lite | std | A | 47 | 94% (44) | 13970 | 2524 | 1070 | 1.11 | 6 | — | 41.6s |
+| gemini-3.5-flash-lite | std | B | 46 | 98% (45) | 11198 | 2868 | 989 | 1.04 | 2 | 0% | 7.1s |
+| gemini-3.5-flash-lite | sym | A | 48 | 92% (44) | 15275 | 3244 | 2003 | 1.15 | 6 | — | 24.3s |
+| gemini-3.5-flash-lite | sym | B | 48 | 96% (46) | 6820 | 1750 | 1472 | 1.06 | 1 | 35% | 8.8s |
+| gemini-3.6-flash | sym | A | 5 | 100% (5) | 7493 | 4924 | 1206 | 1.00 | 0 | — | 55.4s |
+| gemini-3.6-flash | sym | B | 4 | 100% (4) | 2756 | 1163 | 834 | 1.00 | 0 | 100% | 40.2s |
+| gemma-4-26b-a4b-it | std | A | 105 | 96% (101) | 13987 | 9680 | 2370 | 1.32 | 30 | — | 190.0s |
+| gemma-4-26b-a4b-it | std | B | 106 | 94% (100) | 17744 | 11230 | 2492 | 1.28 | 31 | 1% | 204.8s |
+| gemma-4-26b-a4b-it | sym | A | 48 | 100% (48) | 4041 | 4206 | 461 | 1.19 | 9 | — | 174.8s |
+| gemma-4-26b-a4b-it | sym | B | 48 | 98% (47) | 8686 | 6053 | 751 | 1.25 | 12 | 34% | 239.1s |
+| gemma-4-31b-it | std | A | 105 | 99% (104) | 9808 | 6154 | 1786 | 1.08 | 6 | — | 202.9s |
+| gemma-4-31b-it | std | B | 106 | 97% (103) | 10449 | 6453 | 1564 | 1.07 | 6 | 0% | 219.3s |
+| gemma-4-31b-it | sym | A | 48 | 100% (48) | 6158 | 4453 | 1167 | 1.19 | 9 | — | 296.4s |
+| gemma-4-31b-it | sym | B | 48 | 100% (48) | 4783 | 4038 | 573 | 1.00 | 0 | 56% | 246.8s |
 
 ## Paired outcomes (same task and run, both variants finished)
 

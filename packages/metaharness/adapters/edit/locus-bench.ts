@@ -355,8 +355,8 @@ async function writeReport(): Promise<string> {
 		"",
 		`Generated ${new Date().toISOString()} from \`results.jsonl\` (${results.length} runs). Each model runs both variants on the same tasks; compare within a row group, never across models.`,
 		"",
-		"| model | set | var | runs | success | tok/run | out tok/run | edits/run | edit fails | edit_symbol share | med time |",
-		"|---|---|---|---|---|---|---|---|---|---|---|",
+		"| model | set | var | runs | success | tok/run (mean) | tok/run (median) | out tok/run | edits/run | edit fails | edit_symbol share | med time |",
+		"|---|---|---|---|---|---|---|---|---|---|---|---|",
 	];
 	const paired: string[] = ["", "## Paired outcomes (same task and run, both variants finished)", "", "| model | set | pairs | both ok | A only | B only | neither |", "|---|---|---|---|---|---|---|"];
 	const groups = new Map<string, ResultLine[]>();
@@ -375,7 +375,7 @@ async function writeReport(): Promise<string> {
 			const editCalls = vs.reduce((a, r) => a + (r.tools.edit ?? 0) + (r.tools.edit_symbol ?? 0), 0);
 			const symCalls = vs.reduce((a, r) => a + (r.tools.edit_symbol ?? 0), 0);
 			lines.push(
-				`| ${model} | ${set} | ${v} | ${vs.length} | ${((100 * ok) / vs.length).toFixed(0)}% (${ok}) | ${Math.round(mean(vs.map(r => r.tokensTotal)))} | ${Math.round(mean(vs.map(r => r.tokensOutput)))} | ${mean(vs.map(r => r.edits)).toFixed(2)} | ${vs.reduce((a, r) => a + r.editFailures, 0)} | ${v === "B" ? `${editCalls ? ((100 * symCalls) / editCalls).toFixed(0) : 0}%` : "—"} | ${(median(vs.map(r => r.durationMs)) / 1000).toFixed(1)}s |`,
+				`| ${model} | ${set} | ${v} | ${vs.length} | ${((100 * ok) / vs.length).toFixed(0)}% (${ok}) | ${Math.round(mean(vs.map(r => r.tokensTotal)))} | ${median(vs.map(r => r.tokensTotal))} | ${Math.round(mean(vs.map(r => r.tokensOutput)))} | ${mean(vs.map(r => r.edits)).toFixed(2)} | ${vs.reduce((a, r) => a + r.editFailures, 0)} | ${v === "B" ? `${editCalls ? ((100 * symCalls) / editCalls).toFixed(0) : 0}%` : "—"} | ${(median(vs.map(r => r.durationMs)) / 1000).toFixed(1)}s |`,
 			);
 		}
 		const byPair = new Map<string, Partial<Record<Variant, boolean>>>();
