@@ -35,9 +35,12 @@
     "gemma-4-26b-a4b-it|std|structural-swap-if-else-005|0|B": 1,
     "gemma-4-26b-a4b-it|std|structural-swap-sibling-blocks-001|0|B": 1,
     "gemma-4-26b-a4b-it|std|structural-swap-sibling-blocks-004|0|B": 1,
-    "gemma-4-26b-a4b-it|std|structural-swap-sibling-blocks-003|0|A": 2,
+    "gemma-4-26b-a4b-it|std|structural-swap-sibling-blocks-003|0|A": 3,
     "gemma-4-31b-it|std|structural-move-distant-block-003|0|A": 1,
-    "gemma-4-31b-it|std|structural-move-distant-block-004|0|A": 1,
-    "gemma-4-31b-it|std|structural-move-distant-block-003|0|B": 1
+    "gemma-4-31b-it|std|structural-move-distant-block-004|0|A": 2,
+    "gemma-4-31b-it|std|structural-move-distant-block-003|0|B": 1,
+    "gemma-4-31b-it|std|structural-move-distant-block-004|0|B": 1,
+    "gemma-4-31b-it|std|structural-move-distant-block-005|0|A": 1,
+    "gemma-4-26b-a4b-it|std|structural-wrap-redundant-if-011|0|B": 1
   }
 }
