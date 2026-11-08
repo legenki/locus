@@ -1,6 +1,6 @@
 # locus edit benchmark: hashline (A) vs hashline + edit_symbol (B)
 
-Generated 2026-11-08T00:58:00.113Z from `results.jsonl` (530 runs). Each model runs both variants on the same tasks; compare within a row group, never across models.
+Generated 2026-11-08T02:31:01.823Z from `results.jsonl` (565 runs). Each model runs both variants on the same tasks; compare within a row group, never across models.
 
 | model | set | var | runs | success | tok/run | out tok/run | edits/run | edit fails | edit_symbol share | med time |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -16,12 +16,12 @@ Generated 2026-11-08T00:58:00.113Z from `results.jsonl` (530 runs). Each model r
 | gemini-3.5-flash-lite | sym | B | 42 | 95% (40) | 7625 | 1545 | 1.07 | 1 | 31% | 11.2s |
 | gemini-3.6-flash | sym | A | 3 | 100% (3) | 8522 | 1234 | 1.00 | 0 | — | 55.4s |
 | gemini-3.6-flash | sym | B | 2 | 100% (2) | 1023 | 557 | 1.00 | 0 | 100% | 40.2s |
-| gemma-4-26b-a4b-it | std | A | 47 | 94% (44) | 11766 | 1062 | 1.23 | 10 | — | 170.2s |
-| gemma-4-26b-a4b-it | std | B | 45 | 89% (40) | 16174 | 1154 | 1.24 | 11 | 0% | 203.6s |
+| gemma-4-26b-a4b-it | std | A | 58 | 93% (54) | 13456 | 1440 | 1.28 | 14 | — | 182.3s |
+| gemma-4-26b-a4b-it | std | B | 58 | 91% (53) | 16782 | 1705 | 1.28 | 14 | 0% | 219.4s |
 | gemma-4-26b-a4b-it | sym | A | 48 | 100% (48) | 4041 | 461 | 1.19 | 9 | — | 174.8s |
 | gemma-4-26b-a4b-it | sym | B | 48 | 98% (47) | 8686 | 751 | 1.25 | 12 | 34% | 239.1s |
-| gemma-4-31b-it | std | A | 15 | 100% (15) | 7918 | 711 | 1.07 | 0 | — | 168.1s |
-| gemma-4-31b-it | std | B | 19 | 95% (18) | 11528 | 888 | 1.16 | 1 | 0% | 175.4s |
+| gemma-4-31b-it | std | A | 21 | 95% (20) | 8240 | 702 | 1.05 | 0 | — | 168.1s |
+| gemma-4-31b-it | std | B | 24 | 96% (23) | 13849 | 944 | 1.13 | 1 | 0% | 181.7s |
 | gemma-4-31b-it | sym | A | 48 | 100% (48) | 6158 | 1167 | 1.19 | 9 | — | 296.4s |
 | gemma-4-31b-it | sym | B | 48 | 100% (48) | 4783 | 573 | 1.00 | 0 | 56% | 246.8s |
 
@@ -35,7 +35,7 @@ Generated 2026-11-08T00:58:00.113Z from `results.jsonl` (530 runs). Each model r
 | gemini-3.1-flash-lite | sym | 47 | 44 | 0 | 3 | 0 |
 | gemini-3.5-flash-lite | sym | 40 | 36 | 0 | 2 | 2 |
 | gemini-3.6-flash | sym | 2 | 2 | 0 | 0 | 0 |
-| gemma-4-26b-a4b-it | std | 45 | 38 | 4 | 2 | 1 |
+| gemma-4-26b-a4b-it | std | 57 | 49 | 4 | 3 | 1 |
 | gemma-4-26b-a4b-it | sym | 48 | 47 | 1 | 0 | 0 |
-| gemma-4-31b-it | std | 15 | 14 | 1 | 0 | 0 |
+| gemma-4-31b-it | std | 20 | 18 | 1 | 1 | 0 |
 | gemma-4-31b-it | sym | 48 | 48 | 0 | 0 | 0 |
