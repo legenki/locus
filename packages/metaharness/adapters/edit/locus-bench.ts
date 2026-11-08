@@ -43,6 +43,8 @@ interface ModelPlan {
 	timeoutMs: number;
 	/** First-event timeout; slow models need more than the runner's 30 s default. */
 	connectionTimeoutMs?: number;
+	/** Turn cap: a looping run on a 20-request/day model must end as a failure, not eat the day's quota. */
+	maxTurns?: number;
 	sets: Partial<Record<SetName, number>>; // set → runs per task
 }
 
@@ -53,10 +55,10 @@ const MODELS: ModelPlan[] = [
 	{ id: "gemma-4-26b-a4b-it", concurrency: 2, timeoutMs: 420_000, connectionTimeoutMs: 150_000, sets: { sym: 2, std: 1 } },
 	{ id: "gemini-3.5-flash-lite", concurrency: 2, timeoutMs: 180_000, sets: { sym: 2, std: 1 } },
 	{ id: "gemini-3.1-flash-lite", concurrency: 2, timeoutMs: 180_000, sets: { sym: 2, std: 1 } },
-	{ id: "gemini-3.6-flash", concurrency: 1, timeoutMs: 240_000, sets: { sym: 1 } },
-	{ id: "gemini-3.8-flash", concurrency: 1, timeoutMs: 240_000, sets: { sym: 1 } },
-	{ id: "gemini-3-flash-preview", concurrency: 1, timeoutMs: 240_000, sets: { sym: 1 } },
-	{ id: "gemini-2.5-flash", concurrency: 1, timeoutMs: 240_000, sets: { sym: 1 } },
+	{ id: "gemini-3.6-flash", concurrency: 1, timeoutMs: 240_000, maxTurns: 8, sets: { sym: 1 } },
+	{ id: "gemini-3.8-flash", concurrency: 1, timeoutMs: 240_000, maxTurns: 8, sets: { sym: 1 } },
+	{ id: "gemini-3-flash-preview", concurrency: 1, timeoutMs: 240_000, maxTurns: 8, sets: { sym: 1 } },
+	{ id: "gemini-2.5-flash", concurrency: 1, timeoutMs: 240_000, maxTurns: 8, sets: { sym: 1 } },
 ];
 
 interface Item {
@@ -185,6 +187,7 @@ async function runBatch(
 		"--runs", "1",
 		"--timeout", String(m.timeoutMs),
 		...(m.connectionTimeoutMs ? ["--connection-timeout", String(m.connectionTimeoutMs)] : []),
+		...(m.maxTurns ? ["--max-turns", String(m.maxTurns)] : []),
 		"--max-provider-retries", "1",
 		"--output", out,
 		...(set === "sym" ? ["--fixtures", SYMBOL_FIXTURES] : []),
