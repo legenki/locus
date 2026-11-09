@@ -56,7 +56,6 @@ const MODELS: ModelPlan[] = [
 	{ id: "gemini-3.5-flash-lite", concurrency: 2, timeoutMs: 180_000, sets: { sym: 2, std: 1 } },
 	{ id: "gemini-3.1-flash-lite", concurrency: 2, timeoutMs: 180_000, sets: { sym: 2, std: 1 } },
 	{ id: "gemini-3.6-flash", concurrency: 1, timeoutMs: 240_000, maxTurns: 8, sets: { sym: 1 } },
-	{ id: "gemini-3.8-flash", concurrency: 1, timeoutMs: 240_000, maxTurns: 8, sets: { sym: 1 } },
 	{ id: "gemini-3-flash-preview", concurrency: 1, timeoutMs: 240_000, maxTurns: 8, sets: { sym: 1 } },
 	{ id: "gemini-2.5-flash", concurrency: 1, timeoutMs: 240_000, maxTurns: 8, sets: { sym: 1 } },
 ];
