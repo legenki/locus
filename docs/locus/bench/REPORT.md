@@ -1,6 +1,6 @@
 # locus edit benchmark: hashline (A) vs hashline + edit_symbol (B)
 
-Generated 2026-11-16T08:28:42.406Z from `results.jsonl` (1371 runs). Each model runs both variants on the same tasks; compare within a row group, never across models.
+Generated 2026-11-17T08:38:24.044Z from `results.jsonl` (1371 runs). Each model runs both variants on the same tasks; compare within a row group, never across models.
 
 | model | set | var | runs | success | tok/run (mean) | tok/run (median) | out tok/run | edits/run | edit fails | edit_symbol share | med time |
 |---|---|---|---|---|---|---|---|---|---|---|---|

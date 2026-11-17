@@ -43,6 +43,9 @@
     "gemma-4-31b-it|std|structural-move-distant-block-005|0|A": 1,
     "gemma-4-26b-a4b-it|std|structural-wrap-redundant-if-011|0|B": 1,
     "gemini-3.6-flash|sym|symbol-delete-023|0|A": 1,
-    "gemini-3.8-flash|sym|symbol-delete-003|0|B": 1
+    "gemini-3.8-flash|sym|symbol-delete-003|0|B": 1,
+    "gemini-3.6-flash|sym|symbol-replace-021|0|B": 1,
+    "gemini-3.6-flash|sym|symbol-replace-022|0|B": 1,
+    "gemini-3.6-flash|sym|symbol-replace-022|0|A": 1
   }
 }
